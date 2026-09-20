@@ -22,6 +22,7 @@ from multiprocessing.managers import SyncManager
 from threading import Thread
 
 from module.base.log_highlighter import highlight_text
+from module.log_translator import translate_log_line
 from module.gui.process.script_process import ScriptProcess
 from module.config.config_menu import ConfigMenu
 from module.config.config_modify import ConfigModify
@@ -400,7 +401,9 @@ class ProcessManager(QObject):
                 log = q.get(timeout=1)
                 if log is None:
                     continue
-                log = highlight_text(str(log))
+                # 先翻译再高亮: 高亮依赖英文 LEVEL/时间戳/True/False 加色,
+                # 翻译只改正文, 行头保留; 服务端日志不受影响。
+                log = highlight_text(translate_log_line(str(log)))
                 self.log_signal.emit(config_name, log)
 
             except Empty:

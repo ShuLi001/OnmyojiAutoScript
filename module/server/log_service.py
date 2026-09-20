@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
+from module.log_translator import translate_log_text, translate_message
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LOG_ROOT = (PROJECT_ROOT / "log").resolve()
@@ -1318,7 +1320,7 @@ class LogBrowserService:
             data = data[:limit_bytes]
         return {
             "file_name": "log.txt",
-            "content": data.decode("utf-8", errors="ignore"),
+            "content": translate_log_text(data.decode("utf-8", errors="ignore")),
             "size": size,
             "limit_bytes": limit_bytes,
             "truncated": truncated,
@@ -1422,7 +1424,8 @@ class LogBrowserService:
         if not re.match(r"^\s*[^:]+:\d+$", source):
             return text
 
-        return f"{head[5:]} | {level} | {message}{line_end}"
+        # 仅在输出给前端时把英文正文翻译成中文; 日志文件与服务端控制台不受影响
+        return f"{head[5:]} | {level} | {translate_message(message)}{line_end}"
 
 
 log_browser_service = LogBrowserService()

@@ -7,6 +7,7 @@ from asyncio import QueueEmpty, CancelledError, sleep
 from enum import Enum
 
 from module.logger import logger
+from module.log_translator import translate_log_line
 from module.server.config_manager import ConfigManager
 from module.server.script_websocket import ScriptWSManager
 
@@ -127,7 +128,8 @@ class ScriptProcess(ScriptWSManager):
                         previous_log_key = current_log_key
                     else:
                         previous_log_key = None
-                    await self.broadcast_log(log)
+                    # 去重基于英文原文; 仅在广播给前端前翻译, 不影响服务端日志
+                    await self.broadcast_log(translate_log_line(log))
                 except EOFError as e:
                     await sleep(0.5)
                     logger.warning(f'EOFError: {e}')
