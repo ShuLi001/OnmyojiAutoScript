@@ -5,9 +5,9 @@ services:
         volumes:
             - '.:/app/OnmyojiAutoScript:rw'
             - '/etc/localtime:/etc/localtime:ro'
-        container_name: 'oas-env'
-        image: 'oas-env'
+        container_name: 'oas-beta'
+        image: 'oas-beta'
         build:
-            context: ./deploy/docker/
+            context: ./deploy/docker
             dockerfile: ./Dockerfile
             # dockerfile: ./Dockerfile

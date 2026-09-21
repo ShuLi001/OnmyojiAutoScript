@@ -8,6 +8,8 @@ WORKDIR /app/OnmyojiAutoScript
 
 COPY requirements.txt /tmp/requirements.txt
 
+COPY . /app/OnmyojiAutoScript/
+
 # python:3.10-slim is based on debian:12, apt source from https://developer.aliyun.com/mirror/debian
 RUN echo "\
 deb https://mirrors.cloud.tencent.com/debian/ bookworm main non-free non-free-firmware contrib \n\
