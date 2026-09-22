@@ -1041,10 +1041,13 @@ PAGE_DISPLAY_NAMES: dict[str, str] = {
     "page_pk_exit": "孔雀国退出弹窗",
 }
 
-# 匹配独立的 page_xxx 标识符（不含在文件路径或模块路径中）
+# 匹配独立的 page_xxx / PAGE_XXX 标识符（不含在文件路径或模块路径中）
 # 负向先行/后行断言确保前面和后面都不是 ASCII 单词字符或点，避免误匹配路径中的 page_xxx
 # 注意：不能用 \w（Python 默认 \w 包含 Unicode 中文），否则中文字符后的 page_xxx 无法匹配
-_PAGE_NAME_RE: re.Pattern = re.compile(r"(?<![A-Za-z0-9_.])(page_[a-z0-9_]+)(?![A-Za-z0-9_.])")
+# IGNORECASE 使其同时匹配小写 page_xxx 和大写 PAGE_XXX
+_PAGE_NAME_RE: re.Pattern = re.compile(
+    r"(?<![A-Za-z0-9_.])(page_[a-z0-9_]+)(?![A-Za-z0-9_.])", re.IGNORECASE
+)
 
 
 def _translate_page_names(text: str) -> str:
@@ -1059,28 +1062,32 @@ def _translate_page_names(text: str) -> str:
     例如 "已到达页面page_guild" → "已到达页面：阴阳寮"。
     """
 
-    def _is_cjk(ch: str) -> bool:
+    def _is_cjk_ideograph(ch: str) -> bool:
+        """判断字符是否为 CJK 表意文字（实际中文字符，不含标点/全角符号）。
+
+        仅当 page_xxx 前紧邻中文字符（如"已到达页面page_guild"）时才插入冒号；
+        若前一个字符已是标点（如"当前页面：page_main"中的"："），则不重复插入。
+        """
+
         if not ch:
             return False
         code = ord(ch)
         return (
-            0x3000 <= code <= 0x303F  # CJK 标点
-            or 0x3400 <= code <= 0x4DBF  # CJK 扩展 A
+            0x3400 <= code <= 0x4DBF  # CJK 扩展 A
             or 0x4E00 <= code <= 0x9FFF  # CJK 统一表意文字
-            or 0xFF00 <= code <= 0xFFEF  # 全角符号
         )
 
     result: list[str] = []
     last_end = 0
     for match in _PAGE_NAME_RE.finditer(text):
         result.append(text[last_end:match.start()])
-        key = match.group(0)
-        chinese = PAGE_DISPLAY_NAMES.get(key, key)
-        if chinese == key:
+        key = match.group(0).lower()  # 统一转小写以匹配 PAGE_DISPLAY_NAMES 的 key
+        chinese = PAGE_DISPLAY_NAMES.get(key, match.group(0))
+        if chinese == match.group(0):
             # 不在映射表中，保留原文
-            result.append(key)
-        elif match.start() > 0 and _is_cjk(text[match.start() - 1]):
-            # 前一个字符是中文，插入全角冒号
+            result.append(match.group(0))
+        elif match.start() > 0 and _is_cjk_ideograph(text[match.start() - 1]):
+            # 前一个字符是中文字符（非标点），插入全角冒号
             result.append("：" + chinese)
         else:
             result.append(chinese)
