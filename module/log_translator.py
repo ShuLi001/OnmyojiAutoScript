@@ -892,6 +892,203 @@ PHRASES: dict[str, str] = {
 }
 
 # ======================================================================================================================
+# 页面标识符 → 中文显示名映射
+# ----------------------------------------------------------------------------------------------------------------------
+# 在 translate_message 的最后一步（_restore 之后）做替换，不影响 protect / sentence / word 翻译流程。
+# ======================================================================================================================
+PAGE_DISPLAY_NAMES: dict[str, str] = {
+    # 全局页面
+    "page_login": "登录页",
+    "page_main": "庭院",
+    "page_shikigami_records": "式神录",
+    "page_onmyodo": "阴阳术",
+    "page_friends": "好友",
+    "page_daily": "每日任务",
+    "page_courtyard_affairs": "庭院事务",
+    "page_mall": "商店",
+    "page_mall_recommend": "商店推荐",
+    "page_guild": "阴阳寮",
+    "page_shirin": "神龛",
+    "page_team": "队伍编成",
+    "page_collection": "图鉴",
+    "page_travel": "旅行手札",
+    "page_pet": "宠物庭院",
+    "page_act_list": "活动列表",
+    "page_summon": "召唤",
+    "page_town": "町中",
+    "page_entertainment": "娱乐区域",
+    "page_chess": "对弈",
+    "page_chess_battle": "对弈战斗",
+    "page_duel": "斗技",
+    "page_demon_encounter": "逢魔之时",
+    "page_hunt": "狩猎",
+    "page_hunt_kirin": "狩猎麒麟",
+    "page_draft_duel": "选技斗技",
+    "page_hyakkiyakou": "百鬼夜行",
+    "page_exploration": "探索",
+    "page_awake_zones": "觉醒副本",
+    "page_soul_zones": "御魂副本",
+    "page_realm_raid": "结界突破",
+    "page_kekkai_toppa": "寮结界突破",
+    "page_goryou_realm": "御灵境",
+    "page_delegation": "委派",
+    "page_secret_zones": "秘闻副本",
+    "page_area_boss": "地域鬼王",
+    "page_heian_kitan": "平安奇谭",
+    "page_six_gates": "六道之门",
+    "page_bondling_fairyland": "缘结神社",
+    "page_hero_test": "英雄历练",
+    "page_battle_prepare": "战斗准备",
+    "page_battle": "战斗中",
+    "page_battle_result": "战斗结算",
+    "page_reward": "奖励页",
+    "page_battle_team_exit": "组队退出弹窗",
+    "page_battle_team": "组队邀请",
+    # 御魂
+    "page_orochi": "御魂副本",
+    # 探索
+    "page_exp_entrance": "探索副本入口",
+    "page_exp_exit": "探索退出弹窗",
+    "page_exp_main": "探索副本主界面",
+    "page_exp_settings": "探索设置",
+    # 结界
+    "page_guild_realm": "结界",
+    "page_guild_card": "结界卡",
+    "page_guild_realm_growth": "结界育成",
+    "page_guild_realm_utilize": "结界育成寄养",
+    "page_friend_realm": "好友结界",
+    "page_friend_utilize": "好友寄养",
+    "page_gr_ap_box": "体力食盒",
+    "page_gr_exp_jug": "经验酒壶",
+    # 日常
+    "page_store_gift_room": "礼包屋",
+    "page_friends_luck": "好友吉闻",
+    "page_guild_wish": "寮祈愿",
+    # 集体任务
+    "page_collective_missions": "寮集体任务",
+    # 逢魔
+    "page_rwt": "现世逢魔",
+    # 彼世彼岸
+    "page_owt": "彼世彼岸",
+    # 深渊
+    "page_abyss": "深渊",
+    "page_abyss_map": "深渊地图",
+    # 道馆
+    "page_dokan_map": "道馆地图",
+    "page_dokan": "道馆",
+    "page_dokan_priority": "道馆攻击优先级",
+    # 寮商店
+    "page_guild_store": "寮商店",
+    # 武道大会
+    "page_mt": "武道大会",
+    "page_mt_pass": "武道大会门票",
+    "page_mt_ap": "武道大会体力",
+    # 寮宴会
+    "page_banquet_shikigami": "宴会式神",
+    "page_banquet_switch_shikigami": "宴会切换式神",
+    # 呱呱画室
+    "page_gugu": "呱呱画室",
+    "page_gugu_fire": "呱呱画室挑战",
+    # 每周
+    "page_shikigami_collection": "式神收集分享",
+    "page_shikigami_share": "式神分享",
+    "page_touch_fish": "摸鱼行动",
+    # 花车
+    "page_fp_main": "花车主界面",
+    "page_fp_task": "花车任务",
+    "page_fp_placement": "花车放置",
+    # 魔神头条
+    "page_act_list_meta_demon": "活动列表魔神头条",
+    "page_meta_demon": "魔神头条",
+    "page_meta_demon_boss": "魔神头条BOSS",
+    # 活动爬塔
+    "page_act": "爬塔活动",
+    "page_act_map": "活动中转地图",
+    "page_act_ap": "体力爬塔",
+    "page_act_pass": "门票爬塔",
+    "page_act_ap100": "100体爬塔",
+    "page_act_boss": "BOSS爬塔",
+    # 六道之门
+    "page_sr_prepare_exit": "六道准备退出弹窗",
+    "page_sr_open_store": "六道商店弹窗",
+    "page_moon_sea": "月之海",
+    "page_peacock_kingdom": "孔雀国",
+    "page_incense_realm": "香行域",
+    "page_seasonrift_forest": "错季森",
+    "page_pure_buddha_realm": "净佛刹",
+    "page_mantra_tower": "真言塔",
+    # 月之海子页面
+    "page_ms_prepare": "月之海准备",
+    "page_ms_main": "月之海主界面",
+    "page_ms_challenge": "月之海挑战",
+    "page_ms_shop_land": "月之海宁息之屿",
+    "page_ms_mistery_land": "月之海神秘之屿",
+    "page_ms_chaos_land": "月之海混沌之屿",
+    "page_ms_star_land": "月之海星之屿",
+    "page_ms_battle_land": "月之海鏖战之屿",
+    "page_ms_map": "月之海地图",
+    "page_ms_exit": "月之海退出弹窗",
+    # 孔雀国子页面
+    "page_pk_prepare": "孔雀国准备",
+    "page_pk_main": "孔雀国主界面",
+    "page_pk_challenge": "孔雀国挑战",
+    "page_pk_shop_land": "孔雀国宁息之屿",
+    "page_pk_mistery_land": "孔雀国神秘之屿",
+    "page_pk_chaos_land": "孔雀国混沌之屿",
+    "page_pk_bloom_land": "孔雀国绽放之屿",
+    "page_pk_battle_land": "孔雀国鏖战之屿",
+    "page_pk_map": "孔雀国地图",
+    "page_pk_exit": "孔雀国退出弹窗",
+}
+
+# 匹配独立的 page_xxx 标识符（不含在文件路径或模块路径中）
+# 负向先行/后行断言确保前面和后面都不是 ASCII 单词字符或点，避免误匹配路径中的 page_xxx
+# 注意：不能用 \w（Python 默认 \w 包含 Unicode 中文），否则中文字符后的 page_xxx 无法匹配
+_PAGE_NAME_RE: re.Pattern = re.compile(r"(?<![A-Za-z0-9_.])(page_[a-z0-9_]+)(?![A-Za-z0-9_.])")
+
+
+def _translate_page_names(text: str) -> str:
+    """将文本中独立的 page_xxx 标识符替换为中文显示名。
+
+    在 translate_message 的最后一步执行，此时 _protect / _match_sentence /
+    _translate_words / _restore 流程已结束，所有受保护内容已还原。
+    负向断言确保不会替换文件路径（如 page_main.py）或模块路径
+    （如 tasks.GameUi.page_main）中的 page_xxx。
+
+    若 page_xxx 紧邻中文字符（无分隔符），在中文与页面名之间插入全角冒号"："，
+    例如 "已到达页面page_guild" → "已到达页面：阴阳寮"。
+    """
+
+    def _is_cjk(ch: str) -> bool:
+        if not ch:
+            return False
+        code = ord(ch)
+        return (
+            0x3000 <= code <= 0x303F  # CJK 标点
+            or 0x3400 <= code <= 0x4DBF  # CJK 扩展 A
+            or 0x4E00 <= code <= 0x9FFF  # CJK 统一表意文字
+            or 0xFF00 <= code <= 0xFFEF  # 全角符号
+        )
+
+    result: list[str] = []
+    last_end = 0
+    for match in _PAGE_NAME_RE.finditer(text):
+        result.append(text[last_end:match.start()])
+        key = match.group(0)
+        chinese = PAGE_DISPLAY_NAMES.get(key, key)
+        if chinese == key:
+            # 不在映射表中，保留原文
+            result.append(key)
+        elif match.start() > 0 and _is_cjk(text[match.start() - 1]):
+            # 前一个字符是中文，插入全角冒号
+            result.append("：" + chinese)
+        else:
+            result.append(chinese)
+        last_end = match.end()
+    result.append(text[last_end:])
+    return "".join(result)
+
+# ======================================================================================================================
 # 保护规则：把不能翻译的内容替换成私有区单字符占位符
 # ======================================================================================================================
 _PROTECT_PATTERNS: list[re.Pattern] = [
@@ -1130,21 +1327,21 @@ def translate_message(message: str) -> str:
         翻译后的中文正文; 不含英文字母或无法识别的内容原样返回。
     """
     if not message or not re.search(r"[A-Za-z]", message):
-        return message
+        return _translate_page_names(message)
 
     masked, values = _protect(message)
     matched = _match_sentence(masked, values)
     if matched is not None:
         template, slots = matched
-        return _normalize_spacing(_restore(_fill_template(template, slots), values))
+        return _translate_page_names(_normalize_spacing(_restore(_fill_template(template, slots), values)))
 
     translated_masked = _translate_words(masked)
     result = _restore(translated_masked, values)
     if result == message:
-        return message
+        return _translate_page_names(message)
     # 冠词/系动词等可能映射为空串, 归一多余空白后再去除中文相邻空格
     result = re.sub(r"[ \t]{2,}", " ", result).strip()
-    return _normalize_spacing(result)
+    return _translate_page_names(_normalize_spacing(result))
 
 
 # 日志行头: 文件格式

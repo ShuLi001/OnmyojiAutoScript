@@ -22,6 +22,7 @@ else:
 
 # 页面识别条件允许直接使用现有 Rule 元对象或自定义函数。
 RecognizerLike = RuleImage | RuleGif | RuleOcr | Callable
+
 # 页面跳转动作和 hook 动作允许使用点击类元对象、自定义函数或组合动作。
 ActionLike = RuleImage | RuleGif | RuleOcr | RuleList | RuleClick | ActionSequence | ConditionalAction | Callable
 
