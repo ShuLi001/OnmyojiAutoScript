@@ -20,17 +20,17 @@
   {
     "itemName": "e_auto_rotate_on",
     "imageName": "res_e_auto_rotate_on.png",
-    "roiFront": "104,649,153,44",
-    "roiBack": "104,649,153,44",
+    "roiFront": "112,653,140,37",
+    "roiBack": "112,653,140,37",
     "method": "Template matching",
-    "threshold": 0.9,
+    "threshold": 0.85,
     "description": "自动轮换开着"
   },
   {
     "itemName": "e_auto_rotate_off",
     "imageName": "res_e_auto_rotate_off.png",
-    "roiFront": "108,650,150,46",
-    "roiBack": "108,650,150,46",
+    "roiFront": "112,653,140,37",
+    "roiBack": "112,653,140,37",
     "method": "Template matching",
     "threshold": 0.85,
     "description": "自动轮换关闭"
@@ -92,8 +92,8 @@
   {
     "itemName": "e_settings_button",
     "imageName": "res_e_settings_button.png",
-    "roiFront": "37,692,53,26",
-    "roiBack": "37,692,53,26",
+    "roiFront": "42,697,44,17",
+    "roiBack": "42,697,44,17",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "设置按钮"

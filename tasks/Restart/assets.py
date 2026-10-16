@@ -110,8 +110,12 @@ class RestartAssets:
 
 
 	# Ocr Rule Assets
-	# 进入游戏 
-	O_LOGIN_ENTER_GAME = RuleOcr(roi=(543,530,194,125), area=(543,530,194,125), mode="Full", method="Default", keyword="进入", name="login_enter_game")
+	# 进入游戏
+	O_LOGIN_ENTER_GAME = RuleOcr(roi=(539,555,200,80), area=(539,555,200,80), mode="Full", method="Default", keyword="进入", name="login_enter_game")
+	# 游戏更新-下载模式选择页面的确认按钮（带倒计时）
+	O_LOGIN_UPDATE_CONFIRM = RuleOcr(roi=(539,555,200,80), area=(539,555,200,80), mode="Full", method="Default", keyword="确认", name="login_update_confirm")
+	# 游戏更新-资源下载确认弹窗的确定按钮
+	O_LOGIN_UPDATE_OK = RuleOcr(roi=(580,380,280,100), area=(580,380,280,100), mode="Full", method="Default", keyword="确定", name="login_update_ok")
 	# 点击屏幕跳过 
 	O_LOGIN_SKIP_1 = RuleOcr(roi=(1046,35,130,37), area=(1046,35,130,37), mode="Single", method="Default", keyword="点击屏幕跳过", name="login_skip_1")
 	# 登录动画-跳过 

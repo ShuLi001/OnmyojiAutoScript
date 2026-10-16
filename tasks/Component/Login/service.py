@@ -64,6 +64,17 @@ class LoginService(
                 )
                 self.return_to_chess_lobby()
                 return True
+            # 游戏更新流程页面1：下载模式选择，点击"确认"按钮
+            # 必须在I_CANCEL_BATTLE之前，否则取消按钮模板会误匹配更新弹窗的"取消"按钮
+            if self.ocr_appear_click(self.O_LOGIN_UPDATE_CONFIRM, interval=5):
+                logger.info('Game update: download mode selected, click confirm')
+                self.device.stuck_record_clear()
+                continue
+            # 游戏更新流程页面2：资源下载确认弹窗，点击"确定"按钮
+            if self.ocr_appear_click(self.O_LOGIN_UPDATE_OK, interval=5):
+                logger.info('Game update: resource download confirm, click OK to start download')
+                self.device.stuck_record_clear()
+                continue
             if self.appear_then_click(self.I_CANCEL_BATTLE, interval=0.8):
                 logger.info('Cancel continue battle')
                 continue

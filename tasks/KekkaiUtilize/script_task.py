@@ -157,7 +157,15 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
             self.run_utilize(con.select_friend_list, con.shikigami_class, con.shikigami_order)
             # 无论寄养成功还是失败，都先退出好友结界；终止失败时不能把
             # 任务留在目标结界内部。
-            self.goto_page(page_guild_realm_growth)
+            # 好友的育成页同样含 I_RS_RECORDS_SHIKI, 会被误判成自家育成页导致
+            # goto_page 短路; 用顶部"XX的结界"标题区分, 若仍在好友侧先退回寮结界
+            for _ in range(3):
+                self.goto_page(page_guild_realm_growth)
+                self.screenshot()
+                if not self.appear(self.O_R_FRIEND_REALM):
+                    break
+                logger.info('Still in friend realm after utilize, back to guild realm first')
+                self.goto_page(page_guild_realm)
             if self.utilize_terminal_failure:
                 return False
 
@@ -169,7 +177,11 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
         """
         self.goto_page(page_guild_realm_growth)
         if auto_fill:
-            self.ui_click(self.I_AUTO_FILL, self.I_REMOVE_ALL, interval=1.5)
+            # 旧代码用无超时 ui_click: 若实际停在好友育成页(无自动育成/一键移除按钮)
+            # 会无点击空转直到 60s GameStuckError, 加硬超时兜底
+            if not self.ui_click_until_appear_or_timeout(
+                    self.I_AUTO_FILL, self.I_REMOVE_ALL, interval=1.5, timeout=8):
+                logger.warning('Cannot enter auto-fill mode, skip auto fill shikigami')
             self.goto_page(page_guild_realm)
             return
         if self.appear(self.I_RS_LEVEL_MAX):

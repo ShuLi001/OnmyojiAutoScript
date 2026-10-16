@@ -62,9 +62,9 @@ class ExplorationAssets:
 	# 探索按钮 
 	I_E_EXPLORATION_CLICK = RuleImage(roi_front=(1090,599,80,47), roi_back=(867,541,337,157), threshold=0.8, method="Template matching", file="./tasks/Exploration/res/res_e_exploration_click.png")
 	# 自动轮换开着 
-	I_E_AUTO_ROTATE_ON = RuleImage(roi_front=(104,649,153,44), roi_back=(104,649,153,44), threshold=0.9, method="Template matching", file="./tasks/Exploration/res/res_e_auto_rotate_on.png")
+	I_E_AUTO_ROTATE_ON = RuleImage(roi_front=(112,653,140,37), roi_back=(112,653,140,37), threshold=0.85, method="Template matching", file="./tasks/Exploration/res/res_e_auto_rotate_on.png")
 	# 自动轮换关闭 
-	I_E_AUTO_ROTATE_OFF = RuleImage(roi_front=(108,650,150,46), roi_back=(108,650,150,46), threshold=0.85, method="Template matching", file="./tasks/Exploration/res/res_e_auto_rotate_off.png")
+	I_E_AUTO_ROTATE_OFF = RuleImage(roi_front=(112,653,140,37), roi_back=(112,653,140,37), threshold=0.85, method="Template matching", file="./tasks/Exploration/res/res_e_auto_rotate_off.png")
 	# 成功打开设置 
 	I_E_OPEN_SETTINGS = RuleImage(roi_front=(466,110,170,50), roi_back=(466,110,170,50), threshold=0.8, method="Template matching", file="./tasks/Exploration/res/res_e_open_settings.png")
 	# 选择式神稀有度 
@@ -78,7 +78,7 @@ class ExplorationAssets:
 	# 确定按钮 
 	I_E_SURE_BUTTON = RuleImage(roi_front=(1131,425,43,37), roi_back=(1077,367,165,152), threshold=0.65, method="Template matching", file="./tasks/Exploration/res/res_e_sure_button.png")
 	# 设置按钮 
-	I_E_SETTINGS_BUTTON = RuleImage(roi_front=(37,692,53,26), roi_back=(37,692,53,26), threshold=0.8, method="Template matching", file="./tasks/Exploration/res/res_e_settings_button.png")
+	I_E_SETTINGS_BUTTON = RuleImage(roi_front=(42,697,44,17), roi_back=(42,697,44,17), threshold=0.8, method="Template matching", file="./tasks/Exploration/res/res_e_settings_button.png")
 	# 普通怪 
 	I_NORMAL_BATTLE_BUTTON = RuleImage(roi_front=(636,263,42,39), roi_back=(0,0,1279,719), threshold=0.8, method="Template matching", file="./tasks/Exploration/res/res_normal_battle_button.png")
 	# boss 

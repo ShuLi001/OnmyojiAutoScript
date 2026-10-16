@@ -280,12 +280,14 @@ class ScriptTask(GameUi, Summon, DailyTriflesAssets):
                 post_click_timeout = Timer(3).start()
                 while not post_click_timeout.reached():
                     self.screenshot()
-                    # 处理确认弹窗
+                    # 弹窗渲染有延迟，需等待其出现后再点击「确定」
                     if self.appear(self.I_UI_CONFIRM, interval=0.6):
                         self.ui_get_reward(self.I_UI_CONFIRM, click_interval=1.5)
                         donated = True
-                    # 如果没有弹窗了，退出子循环
-                    if not self.appear(self.I_UI_REWARD) and not self.appear(self.I_UI_REWARD):
+                        break
+                    # 部分情况下不弹确认框而直接出现「获得奖励」
+                    if self.ui_reward_appear_click():
+                        donated = True
                         break
                 if donated:
                     # 处理了弹窗，视为捐赠成功
@@ -317,6 +319,14 @@ class ScriptTask(GameUi, Summon, DailyTriflesAssets):
 
     def find_target_name(self, name) -> List[int]:
         """寻找目标名称
+
+        策略：
+        1. 优先用 OCR 精确或相似度匹配名称
+        2. 名称完全识别不到时，按 Y 坐标对 OCR 结果分组统计结果行数；
+           若搜索结果仅 1 行，跳过名称校验，直接用该行位置（避免生僻字昵称
+           如"怼怼"OCR 漏检导致捐赠失败）
+        3. 若多行结果，必须校验名称，继续等待
+
         :param name: 名称
         :return: [x, y, w, h]
         """
@@ -338,10 +348,47 @@ class ScriptTask(GameUi, Summon, DailyTriflesAssets):
                 if similarity > mx_similarity:
                     mx_similarity = similarity
                     name_roi = self.extract_roi(result)
-            if name_roi is None:
-                continue
-            return name_roi  # 找到了直接退出
+            if name_roi is not None:
+                return name_roi  # 找到了直接退出
+
+            # 名称未识别到，统计结果行数
+            rows = self._group_name_rows(text_results)
+            if len(rows) == 1:
+                # 仅一行结果，跳过名称校验
+                row_top_y = rows[0][1]
+                # 名称在头衔（副会长等）上方约一行，向上偏移定位到名称行
+                name_roi = [rows[0][0], max(row_top_y - 55, 0), rows[0][2], 40]
+                logger.info(f'Name OCR missed "{name}", but only one result row found, skip name check')
+                return name_roi
+            # 多行结果必须校验名称，继续等待
+            continue
         return name_roi
+
+    def _group_name_rows(self, text_results) -> List[List[int]]:
+        """将 OCR 结果按 Y 坐标分组为行，返回每行的 [x, y, w, h]（绝对坐标）。
+
+        同一玩家行内，昵称与头衔（副会长/会长/成员等）Y 坐标相近，
+        用此方法统计搜索结果的实际行数。
+        """
+        rows: List[List[int]] = []
+        for result in text_results:
+            roi = self.extract_roi(result)
+            cy = roi[1] + roi[3] // 2  # 行中心 Y
+            placed = False
+            for row in rows:
+                row_cy = row[1] + row[3] // 2
+                if abs(row_cy - cy) < 40:  # 同一行
+                    # 合并：取最小 X/Y，最大宽高覆盖
+                    nx = min(row[0], roi[0])
+                    ny = min(row[1], roi[1])
+                    nw = max(row[0] + row[2], roi[0] + roi[2]) - nx
+                    nh = max(row[1] + row[3], roi[1] + roi[3]) - ny
+                    row[0], row[1], row[2], row[3] = nx, ny, nw, nh
+                    placed = True
+                    break
+            if not placed:
+                rows.append(list(roi))
+        return rows
 
     def extract_roi(self, result: BoxedResult) -> list[int]:
         """从ocr结果提取对应的roi坐标"""

@@ -169,7 +169,7 @@ class CostumeShikigamiAssets:
 	# description 
 	I_SOU_TEAM_PRESENT_12 = RuleImage(roi_front=(734,77,100,41), roi_back=(726,71,115,54), threshold=0.8, method="Template matching", file="./tasks/Component/CostumeShikigami/sk12/sk12_sou_team_present_12.png")
 	# description 
-	I_SOU_SWITCH_SURE_12 = RuleImage(roi_front=(702,401,116,55), roi_back=(690,399,148,64), threshold=0.8, method="Template matching", file="./tasks/Component/CostumeShikigami/sk12/sk12_sou_switch_sure_12.png")
+	I_SOU_SWITCH_SURE_12 = RuleImage(roi_front=(664,407,180,65), roi_back=(656,399,196,81), threshold=0.8, method="Template matching", file="./tasks/Component/CostumeShikigami/sk12/sk12_sou_switch_sure_12.png")
 	# description 
 	I_SOUL_PRESET_12 = RuleImage(roi_front=(342,85,74,31), roi_back=(338,77,83,44), threshold=0.8, method="Template matching", file="./tasks/Component/CostumeShikigami/sk12/sk12_soul_preset_12.png")
 	# description 
