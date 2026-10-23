@@ -80,6 +80,8 @@ class KekkaiUtilizeAssets:
 	O_R_REALM = RuleOcr(roi=(802,158,291,442), area=(802,158,291,442), mode="Full", method="Default", keyword="结界", name="r_realm")
 	# 好友结界标识 
 	O_R_FRIEND_REALM = RuleOcr(roi=(443,14,426,55), area=(443,14,426,55), mode="Full", method="Default", keyword="结界", name="r_friend_realm")
+	# Friend realm title: player name plus the friend-realm suffix
+	O_R_FRIEND_REALM_NAMED = RuleOcr(roi=(443,14,426,55), area=(443,14,426,55), mode="Full", method="Default", keyword="的结界", name="r_friend_realm_named")
 
 
 	# Click Rule Assets
@@ -162,7 +164,7 @@ class KekkaiUtilizeAssets:
 	# description 
 	I_CHECK_FRIEND_REALM_2 = RuleImage(roi_front=(590,143,44,52), roi_back=(538,106,161,158), threshold=0.8, method="Template matching", file="./tasks/KekkaiUtilize/utilize/utilize_check_friend_realm_2.png")
 	# 好友寄养 
-	I_CHECK_FRIEND_REALM_3 = RuleImage(roi_front=(900,23,22,120), roi_back=(884,11,271,160), threshold=0.8, method="Template matching", file="./tasks/KekkaiUtilize/utilize/utilize_check_friend_realm_3.png")
+	I_CHECK_FRIEND_REALM_3 = RuleImage(roi_front=(896,20,31,132), roi_back=(882,8,120,155), threshold=0.8, method="Template matching", file="./tasks/KekkaiUtilize/utilize/utilize_check_friend_realm_3.png")
 
 
 	# Ocr Rule Assets
