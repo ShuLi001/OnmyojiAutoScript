@@ -102,12 +102,17 @@ class BaseTask(GlobalGameAssets, CostumeBase):
                 raise ScriptError(f'Unknown friend invitation type: {invite_type}')
         if not click_button:
             raise ScriptError(f'Unknown click button type: {invite_type}')
+        click_action = None
+        if click_button == self.I_G_ACCEPT:
+            click_action = self.C_G_ACCEPT
+        elif click_button == self.I_G_REJECT:
+            click_action = self.C_G_REJECT
         while 1:
             self.device.screenshot()
             if not self.appear(target=click_button):
                 logger.info('Deal with invitation done')
                 break
-            if self.appear_then_click(click_button, interval=0.8):
+            if self.appear_then_click(click_button, action=click_action, interval=0.8):
                 continue
         # 有的时候长战斗 点击后会取消战斗状态
         self.device.detect_record = detect_record
