@@ -2,8 +2,8 @@
   {
     "itemName": "g_accept",
     "imageName": "gg_g_accept.png",
-    "roiFront": "830,407,56,46",
-    "roiBack": "798,369,117,110",
+    "roiFront": "837,462,70,70",
+    "roiBack": "800,430,150,110",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "接受"
@@ -11,8 +11,8 @@
   {
     "itemName": "g_reject",
     "imageName": "gg_g_reject.png",
-    "roiFront": "832,508,53,51",
-    "roiBack": "808,480,108,101",
+    "roiFront": "846,563,60,63",
+    "roiBack": "820,545,110,100",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "拒绝"

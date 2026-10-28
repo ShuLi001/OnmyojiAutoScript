@@ -12,9 +12,11 @@ class GlobalGameAssets:
 
 	# Image Rule Assets
 	# 接受 
-	I_G_ACCEPT = RuleImage(roi_front=(830,407,56,46), roi_back=(798,369,117,110), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_accept.png")
+	I_G_ACCEPT = RuleImage(roi_front=(837,462,70,70), roi_back=(800,430,150,110), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_accept.png")
+	C_G_ACCEPT = RuleClick(roi_front=(837,462,300,70), roi_back=(837,462,300,70), name="g_accept_click")
 	# 拒绝 
-	I_G_REJECT = RuleImage(roi_front=(832,508,53,51), roi_back=(808,480,108,101), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_reject.png")
+	I_G_REJECT = RuleImage(roi_front=(846,563,60,63), roi_back=(820,545,110,100), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_reject.png")
+	C_G_REJECT = RuleClick(roi_front=(837,561,300,70), roi_back=(837,561,300,70), name="g_reject_click")
 	# 勾玉 
 	I_G_JADE = RuleImage(roi_front=(661,466,43,46), roi_back=(661,466,43,46), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_jade.png")
 	# 猫粮 

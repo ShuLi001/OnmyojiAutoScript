@@ -106,5 +106,32 @@
     "method": "Default",
     "keyword": "悬赏封印",
     "description": "是否有悬赏封印检查"
+  },
+  {
+    "itemName": "wq_page_check",
+    "roiFront": "560,26,166,58",
+    "roiBack": "560,26,166,58",
+    "mode": "Full",
+    "method": "Default",
+    "keyword": "悬赏封印",
+    "description": "悬赏封印页面标题检查"
+  },
+  {
+    "itemName": "wq_target_new",
+    "roiFront": "635,152,370,46",
+    "roiBack": "635,152,370,46",
+    "mode": "Single",
+    "method": "Default",
+    "keyword": "",
+    "description": "新版任务详情中的悬赏目标和目标数量"
+  },
+  {
+    "itemName": "wq_detail_rows_new",
+    "roiFront": "620,270,445,305",
+    "roiBack": "620,270,445,305",
+    "mode": "Full",
+    "method": "Default",
+    "keyword": "",
+    "description": "新版悬赏详情全部发现地点及数量"
   }
 ]
