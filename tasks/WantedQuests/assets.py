@@ -133,24 +133,6 @@ class WantedQuestsAssets:
 	I_WQ_TRACE_ONE_REALWORLD = RuleImage(roi_front=(850,470,180,180), roi_back=(850,470,180,180), threshold=0.8, method="Template matching", file="./tasks/WantedQuests/wq/wq_trace_one_realworld.png")
 	# 探索界面,左侧任务列表右上角右下角标志 
 	I_WQ_LIST_TOP_BOTTOM_CHECK = RuleImage(roi_front=(120,125,25,425), roi_back=(120,125,25,425), threshold=0.8, method="Template matching", file="./tasks/WantedQuests/wq/wq_list_top_bottom_check.png")
-	# 新版悬赏卡片页 一键追踪按钮
-	I_TRACE_ENABLE_NEW = RuleImage(roi_front=(1128,576,136,130), roi_back=(1105,552,171,168), threshold=0.82, method="Template matching", file="./tasks/WantedQuests/wq/wq_trace_enable_new.png")
-	# 新版悬赏卡片页 取消追踪按钮
-	I_TRACE_DISABLE_NEW = RuleImage(roi_front=(1128,576,136,130), roi_back=(1105,552,171,168), threshold=0.82, method="Template matching", file="./tasks/WantedQuests/wq/wq_trace_disable_new.png")
-	# 新版悬赏详情关闭按钮
-	I_DETAIL_CLOSE_NEW = RuleImage(roi_front=(1165,96,55,55), roi_back=(1145,76,90,90), threshold=0.8, method="Template matching", file="./tasks/WantedQuests/wq/wq_close_new.png")
-	# 新版悬赏卡片页 前往探索按钮
-	I_GO_EXPLORE_NEW = RuleImage(roi_front=(1012,621,95,84), roi_back=(990,602,130,110), threshold=0.82, method="Template matching", file="./tasks/WantedQuests/wq/wq_go_explore_new.png")
-	# 新版悬赏详情第一条前往按钮
-	I_GOTO_NEW_1 = RuleImage(roi_front=(1058,277,90,54), roi_back=(1025,250,150,82), threshold=0.8, method="Template matching", file="./tasks/WantedQuests/wq/wq_goto_new.png")
-	# 新版悬赏详情第二条前往按钮
-	I_GOTO_NEW_2 = RuleImage(roi_front=(1058,353,90,54), roi_back=(1025,326,150,82), threshold=0.8, method="Template matching", file="./tasks/WantedQuests/wq/wq_goto_new.png")
-	# 新版悬赏详情第三条前往按钮
-	I_GOTO_NEW_3 = RuleImage(roi_front=(1058,429,90,54), roi_back=(1025,402,150,82), threshold=0.8, method="Template matching", file="./tasks/WantedQuests/wq/wq_goto_new.png")
-	# 新版悬赏详情第四条前往按钮
-	I_GOTO_NEW_4 = RuleImage(roi_front=(1058,505,90,54), roi_back=(1025,478,150,82), threshold=0.8, method="Template matching", file="./tasks/WantedQuests/wq/wq_goto_new.png")
-	# 探索左侧悬赏列表中的神秘妖怪问号图标
-	I_MYSTERY_QUESTION = RuleImage(roi_front=(24,121,62,61), roi_back=(0,110,110,490), threshold=0.82, method="Template matching", file="./tasks/WantedQuests/wq/wq_mystery_question.png")
 
 
 	# Ocr Rule Assets
@@ -178,12 +160,6 @@ class WantedQuestsAssets:
 	O_WQ_TEXT_ALL = RuleOcr(roi=(11,114,96,403), area=(11,114,96,403), mode="Full", method="Default", keyword="", name="wq_text_all")
 	# 是否有悬赏封印检查 
 	O_WQ_LIST_CHECK = RuleOcr(roi=(11,114,92,388), area=(11,114,92,388), mode="Full", method="Default", keyword="悬赏封印", name="wq_list_check")
-	# 悬赏封印页面标题检查
-	O_WQ_PAGE_CHECK = RuleOcr(roi=(560,26,166,58), area=(560,26,166,58), mode="Full", method="Default", keyword="悬赏封印", name="wq_page_check")
-	# 新版任务详情中的悬赏目标和目标数量
-	O_WQ_TARGET_NEW = RuleOcr(roi=(635,152,370,46), area=(635,152,370,46), mode="Single", method="Default", keyword="", name="wq_target_new")
-	# 新版悬赏详情全部发现地点及数量
-	O_WQ_DETAIL_ROWS_NEW = RuleOcr(roi=(620,270,445,305), area=(620,270,445,305), mode="Full", method="Default", keyword="", name="wq_detail_rows_new")
 
 
 	# Image Rule Assets
