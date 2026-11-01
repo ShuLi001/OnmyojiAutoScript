@@ -1968,5 +1968,23 @@
       "GuildBanquet": true,
       "DemonRetreat": true
     }
+  },
+  "asset_snapshot": {
+    "scheduler": {
+      "enable": false,
+      "next_run": "2023-01-01 00:00:00",
+      "priority": 5,
+      "success_interval": "01 00:00:00",
+      "failure_interval": "01 00:00:00",
+      "server_update": "09:00:00",
+      "delay_date": 1,
+      "float_time": "00:00:00"
+    },
+    "asset_snapshot_config": {
+      "force_full_scan": false,
+      "max_reset_swipes": 3,
+      "max_scan_swipes": 10,
+      "match_threshold": 0.95
+    }
   }
 }

@@ -22,6 +22,7 @@ from tasks.RyouToppa.config import RyouToppa
 from tasks.Dokan.config import Dokan
 from tasks.Script.config import Script
 from tasks.Restart.config import Restart
+from tasks.AssetSnapshot.config import AssetSnapshot
 from tasks.GlobalGame.config import GlobalGame
 # 每日任务-----------------------------------------------------------------------------------------------------
 from tasks.AreaBoss.config import AreaBoss
@@ -91,6 +92,7 @@ class ConfigModel(ConfigBase):
     script: Script = Field(default_factory=Script)
     restart: Restart = Field(default_factory=Restart)
     global_game: GlobalGame = Field(default_factory=GlobalGame)
+    asset_snapshot: AssetSnapshot = Field(default_factory=AssetSnapshot)
 
     # 这些是每日任务的
     area_boss: AreaBoss = Field(default_factory=AreaBoss)

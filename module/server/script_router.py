@@ -260,6 +260,36 @@ async def script_stop(script_name: str):
     mm.script_process[script_name].stop()
     return
 
+
+@script_app.get('/{script_name}/asset_snapshot')
+async def script_asset_snapshot(script_name: str):
+    """Return the latest completed asset snapshot for an OAS profile."""
+    from pathlib import Path
+
+    from tasks.AssetSnapshot.assets import AssetSnapshotAssets
+    from tasks.AssetSnapshot.history import SnapshotStore
+
+    config = mm.config_cache(script_name)
+    store = SnapshotStore(
+        Path('config/asset_snapshot'),
+        script_name,
+        str(config.script.device.serial),
+        str(config.restart.login_character_config.character),
+        AssetSnapshotAssets.VARIABLE_MAPPING,
+    )
+    document = store.load()
+    if document is None:
+        return {
+            'status': 'unavailable',
+            'updatedAt': None,
+            'values': {},
+            'message': '暂无已完成的资产快照，请先运行 AssetSnapshot。',
+        }
+    snapshot = dict(document['snapshot'])
+    snapshot['lastCategory'] = document.get('lastCategory', 'composite')
+    snapshot['fullScanCompletedAt'] = document.get('fullScanCompletedAt')
+    return snapshot
+
 @script_app.get('/{script_name}/{task}/args')
 async def script_task(script_name: str, task: str):
     return mm.config_cache(script_name).model.script_task(task)

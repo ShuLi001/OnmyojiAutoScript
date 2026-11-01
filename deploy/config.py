@@ -14,7 +14,7 @@ class ExecutionError(Exception):
 class ConfigModel:
     # Git
     Repository: str = "https://github.com/ShuLi001/OnmyojiAutoScript.git"
-    Branch: str = "mine"
+    Branch: str = "beta"
     GitExecutable: str = "./toolkit/Git/mingw64/bin/git.exe"
     GitProxy: Optional[str] = None
     SSLVerify: bool = False

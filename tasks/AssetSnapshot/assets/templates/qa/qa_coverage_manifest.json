@@ -1,0 +1,971 @@
+{
+  "total_mappings": 73,
+  "total_templates": 72,
+  "top_resources_count": 4,
+  "materials_count": 68,
+  "captured_count": 67,
+  "fallback_count": 5,
+  "quantity_exclusion_spec": {
+    "relative_roi": [
+      40,
+      68,
+      54,
+      25
+    ],
+    "description": "材料卡片 95x95 内部相对区域 [rel_x=40, rel_y=68, width=54, height=25]，更低更紧凑地覆盖右下角数量数字，完全不遮挡上方素材文字与图标主体"
+  },
+  "variants": [
+    {
+      "display_name": "典藏礼券 (选中态变体)",
+      "variable_name": "premium_gift_ticket (selected)",
+      "template_path": "material/典藏礼券_选中.png",
+      "full_cell_path": "full_cells/material/典藏礼券_选中.png",
+      "notes": "打开纳物库默认选中的首个格子，带青蓝色高亮框"
+    }
+  ],
+  "fallback_details": [
+    {
+      "display_name": "大星糖",
+      "variable_name": "large_star_candy",
+      "status": "fallback",
+      "reason": "用户游戏内纳物库该项持有量为0，无实测卡片展示，采用官方图标资产合成标准95x95卡片兜底，不可与其它材料混淆",
+      "full_cell_path": "full_cells/material/大星糖.png",
+      "template_path": "material/大星糖.png"
+    },
+    {
+      "display_name": "神秘的符咒_限时",
+      "variable_name": "limited_mystic_talisman",
+      "status": "fallback",
+      "reason": "用户游戏内纳物库该项持有量为0，无实测卡片展示，采用官方图标资产合成标准95x95卡片兜底，不可与其它材料混淆",
+      "full_cell_path": "full_cells/material/神秘的符咒_限时.png",
+      "template_path": "material/神秘的符咒_限时.png"
+    },
+    {
+      "display_name": "小星糖",
+      "variable_name": "small_star_candy",
+      "status": "fallback",
+      "reason": "用户游戏内纳物库该项持有量为0，无实测卡片展示，采用官方图标资产合成标准95x95卡片兜底，不可与其它材料混淆",
+      "full_cell_path": "full_cells/material/小星糖.png",
+      "template_path": "material/小星糖.png"
+    },
+    {
+      "display_name": "嗔念之卷",
+      "variable_name": "resentment_scroll",
+      "status": "fallback",
+      "reason": "用户游戏内纳物库该项持有量为0，无实测卡片展示，采用官方图标资产合成标准95x95卡片兜底，不可与其它材料混淆",
+      "full_cell_path": "full_cells/material/嗔念之卷.png",
+      "template_path": "material/嗔念之卷.png"
+    },
+    {
+      "display_name": "贪念之卷",
+      "variable_name": "greed_scroll",
+      "status": "fallback",
+      "reason": "用户游戏内纳物库该项持有量为0，无实测卡片展示，采用官方图标资产合成标准95x95卡片兜底，不可与其它材料混淆",
+      "full_cell_path": "full_cells/material/贪念之卷.png",
+      "template_path": "material/贪念之卷.png"
+    }
+  ],
+  "screenshot_pages": {
+    "total_pages": 6,
+    "page_resolution": [
+      1280,
+      720
+    ],
+    "page_order": [
+      "page_1.png (顶部起始基准，is_top=1.0000)",
+      "page_2.png (平滑慢速滑动约2.5行)",
+      "page_3.png (平滑慢速滑动约2.5行)",
+      "page_4.png (平滑慢速滑动约2.5行)",
+      "page_5.png (平滑慢速滑动约2.5行)",
+      "page_6.png (滑动至底部终点，is_bottom=1.0000)"
+    ],
+    "page_files": [
+      "assets/templates/qa/raw_pages/page_1.png",
+      "assets/templates/qa/raw_pages/page_2.png",
+      "assets/templates/qa/raw_pages/page_3.png",
+      "assets/templates/qa/raw_pages/page_4.png",
+      "assets/templates/qa/raw_pages/page_5.png",
+      "assets/templates/qa/raw_pages/page_6.png"
+    ],
+    "overlap_verification": {
+      "page_1_to_page_2": "第3行（痴念之卷等）在Page 1为(271, 493)，在Page 2顶部复现为(271, 231)；百鬼夜行门票等第4行在Page 2核心区(271, 338)完整无遮挡展示",
+      "page_2_to_page_3": "第5行（六星青吉鬼等）在Page 2为(271, 439)，在Page 3复现为(271, 184)；四星青吉鬼、觉醒高级材料在Page 3核心区(271, 284/385)完整展示",
+      "page_3_to_page_4": "第7行（风转符_中级等）在Page 3为(271, 486)，在Page 4复现为(271, 233)；业火轮_低级、SSR全集赏体验卡、彩星糖、星星糖在Page 4核心区(271, 331/432)完整展示",
+      "page_4_to_page_5": "彩星糖等在Page 4为(578, 432)，在Page 5顶部复现；SP皮肤券、高级觉醒材料在Page 5核心区(271, 275/377)完整展示",
+      "page_5_to_page_6": "高级黑豹爪等在Page 5为(271, 377)，在Page 6顶部复现；中级/低级觉醒材料及红蓝应援券在Page 6核心区(271, 373/474/575)完整展示直到触底"
+    }
+  },
+  "captured_materials_coordinates": [
+    {
+      "display_name": "金币",
+      "variable_name": "gold",
+      "source_page": 1,
+      "source_coordinates": [
+        471,
+        13,
+        52,
+        41
+      ],
+      "template_path": "top_resources/金币.png",
+      "full_cell_path": "full_cells/top_resources/金币.png"
+    },
+    {
+      "display_name": "体力",
+      "variable_name": "stamina",
+      "source_page": 1,
+      "source_coordinates": [
+        672,
+        14,
+        51,
+        40
+      ],
+      "template_path": "top_resources/体力.png",
+      "full_cell_path": "full_cells/top_resources/体力.png"
+    },
+    {
+      "display_name": "勾玉",
+      "variable_name": "jade",
+      "source_page": 1,
+      "source_coordinates": [
+        874,
+        13,
+        48,
+        41
+      ],
+      "template_path": "top_resources/勾玉.png",
+      "full_cell_path": "full_cells/top_resources/勾玉.png"
+    },
+    {
+      "display_name": "魂玉",
+      "variable_name": "soul_jade",
+      "source_page": 1,
+      "source_coordinates": [
+        1068,
+        12,
+        50,
+        42
+      ],
+      "template_path": "top_resources/魂玉.png",
+      "full_cell_path": "full_cells/top_resources/魂玉.png"
+    },
+    {
+      "display_name": "八岐大蛇鳞片",
+      "variable_name": "orochi_scale_fragment",
+      "source_page": 1,
+      "source_coordinates": [
+        681,
+        493,
+        95,
+        95
+      ],
+      "template_path": "material/八岐大蛇鳞片.png",
+      "full_cell_path": "full_cells/material/八岐大蛇鳞片.png"
+    },
+    {
+      "display_name": "百鬼夜行门票",
+      "variable_name": "hyakki_ticket",
+      "source_page": 2,
+      "source_coordinates": [
+        271,
+        338,
+        95,
+        95
+      ],
+      "template_path": "material/百鬼夜行门票.png",
+      "full_cell_path": "full_cells/material/百鬼夜行门票.png"
+    },
+    {
+      "display_name": "百物式盘",
+      "variable_name": "hyakki_disc",
+      "source_page": 2,
+      "source_coordinates": [
+        681,
+        338,
+        95,
+        95
+      ],
+      "template_path": "material/百物式盘.png",
+      "full_cell_path": "full_cells/material/百物式盘.png"
+    },
+    {
+      "display_name": "被遗忘的绘本",
+      "variable_name": "forgotten_picture_book",
+      "source_page": 1,
+      "source_coordinates": [
+        476,
+        291,
+        95,
+        95
+      ],
+      "template_path": "material/被遗忘的绘本.png",
+      "full_cell_path": "full_cells/material/被遗忘的绘本.png"
+    },
+    {
+      "display_name": "插画券",
+      "variable_name": "illustration_ticket",
+      "source_page": 1,
+      "source_coordinates": [
+        578,
+        291,
+        95,
+        95
+      ],
+      "template_path": "material/插画券.png",
+      "full_cell_path": "full_cells/material/插画券.png"
+    },
+    {
+      "display_name": "痴念之卷",
+      "variable_name": "obsession_scroll",
+      "source_page": 1,
+      "source_coordinates": [
+        271,
+        493,
+        95,
+        95
+      ],
+      "template_path": "material/痴念之卷.png",
+      "full_cell_path": "full_cells/material/痴念之卷.png"
+    },
+    {
+      "display_name": "大蛇的逆鳞",
+      "variable_name": "orochi_scale",
+      "source_page": 1,
+      "source_coordinates": [
+        373,
+        392,
+        95,
+        95
+      ],
+      "template_path": "material/大蛇的逆鳞.png",
+      "full_cell_path": "full_cells/material/大蛇的逆鳞.png"
+    },
+    {
+      "display_name": "低级苍龙鳞",
+      "variable_name": "low_azure_dragon_scale",
+      "source_page": 6,
+      "source_coordinates": [
+        578,
+        474,
+        95,
+        95
+      ],
+      "template_path": "material/低级苍龙鳞.png",
+      "full_cell_path": "full_cells/material/低级苍龙鳞.png"
+    },
+    {
+      "display_name": "低级黑豹爪",
+      "variable_name": "low_black_panther_claw",
+      "source_page": 6,
+      "source_coordinates": [
+        271,
+        474,
+        95,
+        95
+      ],
+      "template_path": "material/低级黑豹爪.png",
+      "full_cell_path": "full_cells/material/低级黑豹爪.png"
+    },
+    {
+      "display_name": "低级冥雀羽",
+      "variable_name": "low_dark_bird_feather",
+      "source_page": 6,
+      "source_coordinates": [
+        373,
+        474,
+        95,
+        95
+      ],
+      "template_path": "material/低级冥雀羽.png",
+      "full_cell_path": "full_cells/material/低级冥雀羽.png"
+    },
+    {
+      "display_name": "低级妖狐面",
+      "variable_name": "low_fox_mask",
+      "source_page": 6,
+      "source_coordinates": [
+        476,
+        474,
+        95,
+        95
+      ],
+      "template_path": "material/低级妖狐面.png",
+      "full_cell_path": "full_cells/material/低级妖狐面.png"
+    },
+    {
+      "display_name": "典藏礼券",
+      "variable_name": "premium_gift_ticket",
+      "source_page": 1,
+      "source_coordinates": [
+        271,
+        188,
+        95,
+        95
+      ],
+      "template_path": "material/典藏礼券.png",
+      "full_cell_path": "full_cells/material/典藏礼券.png"
+    },
+    {
+      "display_name": "风铃",
+      "variable_name": "wind_chime",
+      "source_page": 3,
+      "source_coordinates": [
+        476,
+        284,
+        95,
+        95
+      ],
+      "template_path": "material/风铃.png",
+      "full_cell_path": "full_cells/material/风铃.png"
+    },
+    {
+      "display_name": "风转符_低级",
+      "variable_name": "low_wind_transfer_talisman",
+      "source_page": 3,
+      "source_coordinates": [
+        681,
+        486,
+        95,
+        95
+      ],
+      "template_path": "material/风转符_低级.png",
+      "full_cell_path": "full_cells/material/风转符_低级.png"
+    },
+    {
+      "display_name": "风转符_高级",
+      "variable_name": "high_wind_transfer_talisman",
+      "source_page": 3,
+      "source_coordinates": [
+        373,
+        385,
+        95,
+        95
+      ],
+      "template_path": "material/风转符_高级.png",
+      "full_cell_path": "full_cells/material/风转符_高级.png"
+    },
+    {
+      "display_name": "风转符_中级",
+      "variable_name": "mid_wind_transfer_talisman",
+      "source_page": 3,
+      "source_coordinates": [
+        271,
+        486,
+        95,
+        95
+      ],
+      "template_path": "material/风转符_中级.png",
+      "full_cell_path": "full_cells/material/风转符_中级.png"
+    },
+    {
+      "display_name": "逢魔之魂",
+      "variable_name": "demon_soul",
+      "source_page": 1,
+      "source_coordinates": [
+        271,
+        392,
+        95,
+        95
+      ],
+      "template_path": "material/逢魔之魂.png",
+      "full_cell_path": "full_cells/material/逢魔之魂.png"
+    },
+    {
+      "display_name": "高级苍龙鳞",
+      "variable_name": "high_azure_dragon_scale",
+      "source_page": 5,
+      "source_coordinates": [
+        578,
+        377,
+        95,
+        95
+      ],
+      "template_path": "material/高级苍龙鳞.png",
+      "full_cell_path": "full_cells/material/高级苍龙鳞.png"
+    },
+    {
+      "display_name": "高级黑豹爪",
+      "variable_name": "high_black_panther_claw",
+      "source_page": 5,
+      "source_coordinates": [
+        271,
+        377,
+        95,
+        95
+      ],
+      "template_path": "material/高级黑豹爪.png",
+      "full_cell_path": "full_cells/material/高级黑豹爪.png"
+    },
+    {
+      "display_name": "高级冥雀羽",
+      "variable_name": "high_dark_bird_feather",
+      "source_page": 5,
+      "source_coordinates": [
+        373,
+        377,
+        95,
+        95
+      ],
+      "template_path": "material/高级冥雀羽.png",
+      "full_cell_path": "full_cells/material/高级冥雀羽.png"
+    },
+    {
+      "display_name": "高级妖狐面",
+      "variable_name": "high_fox_mask",
+      "source_page": 5,
+      "source_coordinates": [
+        476,
+        377,
+        95,
+        95
+      ],
+      "template_path": "material/高级妖狐面.png",
+      "full_cell_path": "full_cells/material/高级妖狐面.png"
+    },
+    {
+      "display_name": "花笺",
+      "variable_name": "flower_note",
+      "source_page": 2,
+      "source_coordinates": [
+        578,
+        439,
+        95,
+        95
+      ],
+      "template_path": "material/花笺.png",
+      "full_cell_path": "full_cells/material/花笺.png"
+    },
+    {
+      "display_name": "吉运达摩",
+      "variable_name": "lucky_daruma",
+      "source_page": 2,
+      "source_coordinates": [
+        373,
+        439,
+        95,
+        95
+      ],
+      "template_path": "material/吉运达摩.png",
+      "full_cell_path": "full_cells/material/吉运达摩.png"
+    },
+    {
+      "display_name": "寄售券",
+      "variable_name": "consignment_ticket",
+      "source_page": 3,
+      "source_coordinates": [
+        578,
+        284,
+        95,
+        95
+      ],
+      "template_path": "material/寄售券.png",
+      "full_cell_path": "full_cells/material/寄售券.png"
+    },
+    {
+      "display_name": "结界挑战券",
+      "variable_name": "realm_challenge_ticket",
+      "source_page": 2,
+      "source_coordinates": [
+        578,
+        338,
+        95,
+        95
+      ],
+      "template_path": "material/结界挑战券.png",
+      "full_cell_path": "full_cells/material/结界挑战券.png"
+    },
+    {
+      "display_name": "金御札",
+      "variable_name": "gold_seal",
+      "source_page": 1,
+      "source_coordinates": [
+        578,
+        392,
+        95,
+        95
+      ],
+      "template_path": "material/金御札.png",
+      "full_cell_path": "full_cells/material/金御札.png"
+    },
+    {
+      "display_name": "六星青吉鬼",
+      "variable_name": "six_star_auspicious_demon",
+      "source_page": 2,
+      "source_coordinates": [
+        271,
+        439,
+        95,
+        95
+      ],
+      "template_path": "material/六星青吉鬼.png",
+      "full_cell_path": "full_cells/material/六星青吉鬼.png"
+    },
+    {
+      "display_name": "鸣契石",
+      "variable_name": "oath_stone",
+      "source_page": 1,
+      "source_coordinates": [
+        373,
+        493,
+        95,
+        95
+      ],
+      "template_path": "material/鸣契石.png",
+      "full_cell_path": "full_cells/material/鸣契石.png"
+    },
+    {
+      "display_name": "皮肤券",
+      "variable_name": "skin_ticket",
+      "source_page": 5,
+      "source_coordinates": [
+        681,
+        377,
+        95,
+        95
+      ],
+      "template_path": "material/皮肤券.png",
+      "full_cell_path": "full_cells/material/皮肤券.png"
+    },
+    {
+      "display_name": "破碎的符咒",
+      "variable_name": "broken_talisman",
+      "source_page": 1,
+      "source_coordinates": [
+        578,
+        188,
+        95,
+        95
+      ],
+      "template_path": "material/破碎的符咒.png",
+      "full_cell_path": "full_cells/material/破碎的符咒.png"
+    },
+    {
+      "display_name": "契忆",
+      "variable_name": "memory_token",
+      "source_page": 1,
+      "source_coordinates": [
+        681,
+        291,
+        95,
+        95
+      ],
+      "template_path": "material/契忆.png",
+      "full_cell_path": "full_cells/material/契忆.png"
+    },
+    {
+      "display_name": "千咒式盘",
+      "variable_name": "thousand_talisman_disc",
+      "source_page": 2,
+      "source_coordinates": [
+        373,
+        338,
+        95,
+        95
+      ],
+      "template_path": "material/千咒式盘.png",
+      "full_cell_path": "full_cells/material/千咒式盘.png"
+    },
+    {
+      "display_name": "神秘的符咒",
+      "variable_name": "mystic_talisman",
+      "source_page": 1,
+      "source_coordinates": [
+        373,
+        188,
+        95,
+        95
+      ],
+      "template_path": "material/神秘的符咒.png",
+      "full_cell_path": "full_cells/material/神秘的符咒.png"
+    },
+    {
+      "display_name": "式神挑战券",
+      "variable_name": "shikigami_challenge_ticket",
+      "source_page": 2,
+      "source_coordinates": [
+        476,
+        338,
+        95,
+        95
+      ],
+      "template_path": "material/式神挑战券.png",
+      "full_cell_path": "full_cells/material/式神挑战券.png"
+    },
+    {
+      "display_name": "水灵鲤_低级",
+      "variable_name": "low_spirit_carp",
+      "source_page": 3,
+      "source_coordinates": [
+        578,
+        486,
+        95,
+        95
+      ],
+      "template_path": "material/水灵鲤_低级.png",
+      "full_cell_path": "full_cells/material/水灵鲤_低级.png"
+    },
+    {
+      "display_name": "水灵鲤_高级",
+      "variable_name": "high_spirit_carp",
+      "source_page": 3,
+      "source_coordinates": [
+        271,
+        385,
+        95,
+        95
+      ],
+      "template_path": "material/水灵鲤_高级.png",
+      "full_cell_path": "full_cells/material/水灵鲤_高级.png"
+    },
+    {
+      "display_name": "水灵鲤_中级",
+      "variable_name": "mid_spirit_carp",
+      "source_page": 3,
+      "source_coordinates": [
+        681,
+        385,
+        95,
+        95
+      ],
+      "template_path": "material/水灵鲤_中级.png",
+      "full_cell_path": "full_cells/material/水灵鲤_中级.png"
+    },
+    {
+      "display_name": "四星青吉鬼",
+      "variable_name": "four_star_auspicious_demon",
+      "source_page": 3,
+      "source_coordinates": [
+        271,
+        284,
+        95,
+        95
+      ],
+      "template_path": "material/四星青吉鬼.png",
+      "full_cell_path": "full_cells/material/四星青吉鬼.png"
+    },
+    {
+      "display_name": "天雷鼓_低级",
+      "variable_name": "low_thunder_drum",
+      "source_page": 3,
+      "source_coordinates": [
+        476,
+        486,
+        95,
+        95
+      ],
+      "template_path": "material/天雷鼓_低级.png",
+      "full_cell_path": "full_cells/material/天雷鼓_低级.png"
+    },
+    {
+      "display_name": "天雷鼓_高级",
+      "variable_name": "high_thunder_drum",
+      "source_page": 3,
+      "source_coordinates": [
+        681,
+        284,
+        95,
+        95
+      ],
+      "template_path": "material/天雷鼓_高级.png",
+      "full_cell_path": "full_cells/material/天雷鼓_高级.png"
+    },
+    {
+      "display_name": "天雷鼓_中级",
+      "variable_name": "mid_thunder_drum",
+      "source_page": 3,
+      "source_coordinates": [
+        578,
+        385,
+        95,
+        95
+      ],
+      "template_path": "material/天雷鼓_中级.png",
+      "full_cell_path": "full_cells/material/天雷鼓_中级.png"
+    },
+    {
+      "display_name": "万象式盘",
+      "variable_name": "myriad_disc",
+      "source_page": 1,
+      "source_coordinates": [
+        476,
+        493,
+        95,
+        95
+      ],
+      "template_path": "material/万象式盘.png",
+      "full_cell_path": "full_cells/material/万象式盘.png"
+    },
+    {
+      "display_name": "万象之魄",
+      "variable_name": "myriad_soul",
+      "source_page": 1,
+      "source_coordinates": [
+        271,
+        291,
+        95,
+        95
+      ],
+      "template_path": "material/万象之魄.png",
+      "full_cell_path": "full_cells/material/万象之魄.png"
+    },
+    {
+      "display_name": "五星青吉鬼",
+      "variable_name": "five_star_auspicious_demon",
+      "source_page": 2,
+      "source_coordinates": [
+        476,
+        439,
+        95,
+        95
+      ],
+      "template_path": "material/五星青吉鬼.png",
+      "full_cell_path": "full_cells/material/五星青吉鬼.png"
+    },
+    {
+      "display_name": "现世符咒",
+      "variable_name": "worldly_talisman",
+      "source_page": 1,
+      "source_coordinates": [
+        476,
+        188,
+        95,
+        95
+      ],
+      "template_path": "material/现世符咒.png",
+      "full_cell_path": "full_cells/material/现世符咒.png"
+    },
+    {
+      "display_name": "星星糖",
+      "variable_name": "star_candy",
+      "source_page": 4,
+      "source_coordinates": [
+        681,
+        432,
+        95,
+        95
+      ],
+      "template_path": "material/星星糖.png",
+      "full_cell_path": "full_cells/material/星星糖.png"
+    },
+    {
+      "display_name": "业火轮_低级",
+      "variable_name": "low_karmic_flame_wheel",
+      "source_page": 4,
+      "source_coordinates": [
+        271,
+        331,
+        95,
+        95
+      ],
+      "template_path": "material/业火轮_低级.png",
+      "full_cell_path": "full_cells/material/业火轮_低级.png"
+    },
+    {
+      "display_name": "业火轮_高级",
+      "variable_name": "high_karmic_flame_wheel",
+      "source_page": 3,
+      "source_coordinates": [
+        476,
+        385,
+        95,
+        95
+      ],
+      "template_path": "material/业火轮_高级.png",
+      "full_cell_path": "full_cells/material/业火轮_高级.png"
+    },
+    {
+      "display_name": "业火轮_中级",
+      "variable_name": "mid_karmic_flame_wheel",
+      "source_page": 3,
+      "source_coordinates": [
+        373,
+        486,
+        95,
+        95
+      ],
+      "template_path": "material/业火轮_中级.png",
+      "full_cell_path": "full_cells/material/业火轮_中级.png"
+    },
+    {
+      "display_name": "樱饼",
+      "variable_name": "sakura_mochi",
+      "source_page": 1,
+      "source_coordinates": [
+        578,
+        493,
+        95,
+        95
+      ],
+      "template_path": "material/樱饼.png",
+      "full_cell_path": "full_cells/material/樱饼.png"
+    },
+    {
+      "display_name": "樱灯饰",
+      "variable_name": "sakura_lantern",
+      "source_page": 1,
+      "source_coordinates": [
+        373,
+        291,
+        95,
+        95
+      ],
+      "template_path": "material/樱灯饰.png",
+      "full_cell_path": "full_cells/material/樱灯饰.png"
+    },
+    {
+      "display_name": "御灵境之钥",
+      "variable_name": "spirit_realm_key",
+      "source_page": 1,
+      "source_coordinates": [
+        476,
+        392,
+        95,
+        95
+      ],
+      "template_path": "material/御灵境之钥.png",
+      "full_cell_path": "full_cells/material/御灵境之钥.png"
+    },
+    {
+      "display_name": "御守",
+      "variable_name": "omamori",
+      "source_page": 3,
+      "source_coordinates": [
+        373,
+        284,
+        95,
+        95
+      ],
+      "template_path": "material/御守.png",
+      "full_cell_path": "full_cells/material/御守.png"
+    },
+    {
+      "display_name": "御札",
+      "variable_name": "seal",
+      "source_page": 1,
+      "source_coordinates": [
+        681,
+        392,
+        95,
+        95
+      ],
+      "template_path": "material/御札.png",
+      "full_cell_path": "full_cells/material/御札.png"
+    },
+    {
+      "display_name": "纸扇",
+      "variable_name": "paper_fan",
+      "source_page": 2,
+      "source_coordinates": [
+        681,
+        439,
+        95,
+        95
+      ],
+      "template_path": "material/纸扇.png",
+      "full_cell_path": "full_cells/material/纸扇.png"
+    },
+    {
+      "display_name": "中级苍龙鳞",
+      "variable_name": "mid_azure_dragon_scale",
+      "source_page": 6,
+      "source_coordinates": [
+        681,
+        373,
+        95,
+        95
+      ],
+      "template_path": "material/中级苍龙鳞.png",
+      "full_cell_path": "full_cells/material/中级苍龙鳞.png"
+    },
+    {
+      "display_name": "中级黑豹爪",
+      "variable_name": "mid_black_panther_claw",
+      "source_page": 6,
+      "source_coordinates": [
+        373,
+        373,
+        95,
+        95
+      ],
+      "template_path": "material/中级黑豹爪.png",
+      "full_cell_path": "full_cells/material/中级黑豹爪.png"
+    },
+    {
+      "display_name": "中级冥雀羽",
+      "variable_name": "mid_dark_bird_feather",
+      "source_page": 6,
+      "source_coordinates": [
+        476,
+        373,
+        95,
+        95
+      ],
+      "template_path": "material/中级冥雀羽.png",
+      "full_cell_path": "full_cells/material/中级冥雀羽.png"
+    },
+    {
+      "display_name": "中级妖狐面",
+      "variable_name": "mid_fox_mask",
+      "source_page": 6,
+      "source_coordinates": [
+        578,
+        373,
+        95,
+        95
+      ],
+      "template_path": "material/中级妖狐面.png",
+      "full_cell_path": "full_cells/material/中级妖狐面.png"
+    },
+    {
+      "display_name": "SP皮肤券",
+      "variable_name": "sp_skin_ticket",
+      "source_page": 5,
+      "source_coordinates": [
+        373,
+        275,
+        95,
+        95
+      ],
+      "template_path": "material/SP皮肤券.png",
+      "full_cell_path": "full_cells/material/SP皮肤券.png"
+    },
+    {
+      "display_name": "SSR全集赏_体验",
+      "variable_name": "ssr_collection_trial",
+      "source_page": 4,
+      "source_coordinates": [
+        476,
+        331,
+        95,
+        95
+      ],
+      "template_path": "material/SSR全集赏_体验.png",
+      "full_cell_path": "full_cells/material/SSR全集赏_体验.png"
+    },
+    {
+      "display_name": "彩星糖",
+      "variable_name": "colorful_star_candy",
+      "source_page": 4,
+      "source_coordinates": [
+        578,
+        432,
+        95,
+        95
+      ],
+      "template_path": "material/彩星糖.png",
+      "full_cell_path": "full_cells/material/彩星糖.png"
+    },
+    {
+      "display_name": "红蓝应援券",
+      "variable_name": "red_blue_support_ticket",
+      "source_page": 6,
+      "source_coordinates": [
+        271,
+        575,
+        95,
+        95
+      ],
+      "template_path": "material/红蓝应援券.png",
+      "full_cell_path": "full_cells/material/红蓝应援券.png"
+    }
+  ]
+}
