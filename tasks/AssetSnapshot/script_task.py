@@ -163,6 +163,9 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
     def _scan_material_pages(self, values: dict[str, int]) -> bool:
         previous_signature = None
         for page_index in range(self.max_scan_swipes + 1):
+            # Material OCR can take longer than the image server frame TTL.  Always
+            # register a fresh frame before using it for the next page.
+            self._refresh_inventory_frame(f"scan page {page_index + 1}")
             if not self.appear(self.I_CHECK_INVENTORY):
                 raise ScriptError("扫描期间离开纳物库，保留旧历史")
             signature = self._material_grid_signature()
@@ -229,10 +232,9 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         self,
         page_index: int,
     ) -> list[tuple[object, float, tuple[int, int, int, int]]]:
-        results = get_image_client().match_many(
-            rules_data=[rule.to_service_payload() for rule in self.MATERIAL_RULES],
-            image=self.device.image,
-            frame_id=self.device.image_frame_id,
+        results = self._match_many_with_frame_retry(
+            self.MATERIAL_RULES,
+            purpose=f"material page {page_index + 1}",
             threshold=0.0,
         )
         matches = []
@@ -305,10 +307,58 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             raise ScriptError(f"纳物库复位达到 {self.max_reset_swipes} 次上限，未确认顶部")
 
     def _scroll_boundary_state(self) -> str:
-        return scroll_boundary_state(
-            top=self.appear(self.I_SCROLL_THUMB_TOP),
-            bottom=self.appear(self.I_SCROLL_THUMB_BOTTOM),
+        # Boundary matching happens after the per-card OCR and may otherwise use
+        # a frame that has already expired in the image service.
+        self._refresh_inventory_frame("scroll boundary")
+        results = self._match_many_with_frame_retry(
+            [self.I_SCROLL_THUMB_TOP, self.I_SCROLL_THUMB_BOTTOM],
+            purpose="scroll boundary",
         )
+        top = self.I_SCROLL_THUMB_TOP._apply_match_result(results[0])
+        bottom = self.I_SCROLL_THUMB_BOTTOM._apply_match_result(results[1])
+        state = scroll_boundary_state(top=top, bottom=bottom)
+        logger.debug(f"AssetSnapshot scroll boundary: {state} top={top} bottom={bottom}")
+        return state
+
+    @staticmethod
+    def _is_unknown_frame_error(error: BaseException) -> bool:
+        """识别图像服务报告的过期/不存在 frame_id。"""
+        return "Unknown frame id" in str(error)
+
+    def _refresh_inventory_frame(self, purpose: str) -> None:
+        """获取并注册一张新截图，避免长 OCR 后继续复用旧帧。"""
+        self.screenshot()
+        logger.debug(
+            f"AssetSnapshot refreshed image frame for {purpose}: "
+            f"frame_id={getattr(self.device, 'image_frame_id', None)}"
+        )
+
+    def _match_many_with_frame_retry(
+        self,
+        rules: list[object],
+        *,
+        purpose: str,
+        threshold: float | None = None,
+    ) -> list[dict]:
+        """在同一截图帧上批量匹配，遇到失效帧时刷新并重试一次。"""
+        rules_data = [rule.to_service_payload() for rule in rules]
+        for attempt in range(2):
+            try:
+                return get_image_client().match_many(
+                    rules_data=rules_data,
+                    image=self.device.image,
+                    frame_id=self.device.image_frame_id,
+                    threshold=threshold,
+                )
+            except Exception as error:
+                if not self._is_unknown_frame_error(error) or attempt:
+                    raise
+                logger.warning(
+                    f"AssetSnapshot image frame expired during {purpose}; "
+                    "refreshing screenshot and retrying"
+                )
+                self._refresh_inventory_frame(f"retry {purpose}")
+        raise RuntimeError(f"AssetSnapshot frame retry unexpectedly exhausted: {purpose}")
 
     def _swipe_material_grid(
         self,
@@ -324,16 +374,23 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             x_offset=self.swipe_random_x_offset,
             y_offset=self.swipe_random_y_offset,
         )
+        before_signature = self._material_grid_signature()
+        logger.info(
+            f"AssetSnapshot material swipe start: {p1} -> {p2}, "
+            f"before_signature={before_signature}"
+        )
         self.device.swipe(
             p1=list(p1),
             p2=list(p2),
             duration=self.swipe_duration,
             control_name=control_name,
         )
+        logger.info("AssetSnapshot material swipe dispatched")
 
     def _wait_for_material_grid_stability(self) -> None:
         time.sleep(0.6)
         self.screenshot()
+        before_signature = self._material_grid_signature()
         previous_signature = self._material_grid_signature()
         stable_frames = 0
         deadline = time.monotonic() + self.settle_timeout_seconds
@@ -344,6 +401,11 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             if signature == previous_signature:
                 stable_frames += 1
                 if stable_frames >= self.settle_stable_frames:
+                    logger.info(
+                        "AssetSnapshot material swipe settled: "
+                        f"changed={before_signature != signature}, "
+                        f"before_signature={before_signature}, after_signature={signature}"
+                    )
                     return
             else:
                 stable_frames = 0

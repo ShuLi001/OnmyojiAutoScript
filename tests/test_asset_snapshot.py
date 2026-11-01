@@ -1,5 +1,7 @@
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from tasks.AssetSnapshot.asset_snapshot import (
     MATERIAL_SWIPE_END,
@@ -109,6 +111,33 @@ class AssetSnapshotContractTest(unittest.TestCase):
         self.assertEqual(scroll_boundary_state(top=False, bottom=True), "bottom")
         self.assertEqual(scroll_boundary_state(top=False, bottom=False), "middle")
         self.assertEqual(scroll_boundary_state(top=True, bottom=True), "unknown")
+
+    def test_scroll_boundary_refreshes_and_retries_expired_frame(self):
+        task = object.__new__(ScriptTask)
+        task.device = SimpleNamespace(
+            image=__import__("numpy").zeros((720, 1280, 3), dtype="uint8"),
+            image_frame_id="stale",
+        )
+
+        def refresh_frame():
+            task.device.image_frame_id = "fresh"
+
+        task.screenshot = Mock(side_effect=refresh_frame)
+        client = Mock()
+        client.match_many.side_effect = [
+            RuntimeError("RemoteError: KeyError: 'Unknown frame id: stale'"),
+            [
+                {"matched": True, "roi_front": [792, 162, 43, 43]},
+                {"matched": False, "roi_front": None},
+            ],
+        ]
+
+        with patch("tasks.AssetSnapshot.script_task.get_image_client", return_value=client):
+            self.assertEqual(task._scroll_boundary_state(), "top")
+
+        self.assertEqual(task.screenshot.call_count, 2)
+        self.assertEqual(client.match_many.call_count, 2)
+        self.assertEqual(client.match_many.call_args.kwargs["frame_id"], "fresh")
 
 
 if __name__ == "__main__":
