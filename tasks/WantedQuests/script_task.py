@@ -25,6 +25,13 @@ from tasks.WantedQuests.config import CooperationType, CooperationSelectMask, WQ
 from tasks.WantedQuests.explore import WQExplore, ExploreWantedBoss
 
 
+def is_wq_detail_title(text: str) -> bool:
+    if not isinstance(text, str):
+        return False
+    text = text.strip()
+    return text.startswith(('悬赏目标', '自己击败'))
+
+
 class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
     # 追踪界面(显示"前往"按钮的界面,左上角位置,神秘任务不好使)显示以下名称时,任务不再执行
     unwanted_boss_name_list: list = []
@@ -104,7 +111,16 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
     def is_new_wq_detail(self) -> bool:
         """新版详情没有旧版的追踪角标，用目标标题确认弹窗。"""
         target = self.O_WQ_TARGET_NEW.ocr(self.device.image)
-        return isinstance(target, str) and '悬赏目标' in target
+        if is_wq_detail_title(target):
+            return True
+        detail_controls = (
+            self.I_GOTO_NEW_1,
+            self.I_GOTO_NEW_2,
+            self.I_GOTO_NEW_3,
+            self.I_GOTO_NEW_4,
+            self.I_DETAIL_CLOSE_NEW,
+        )
+        return any(self.appear(rule) for rule in detail_controls)
 
     def next_run(self):
         before_end: time = self.get_config().before_end
