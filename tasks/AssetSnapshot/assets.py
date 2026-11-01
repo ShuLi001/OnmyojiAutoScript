@@ -121,6 +121,31 @@ class AssetSnapshotAssets:
         for variable_name, roi in TOP_RESOURCE_ROIS.items()
     }
 
+    # Stay left of the purchase '+' button at x=820 and later.
+    C_STAMINA_DETAIL = RuleClick(
+        roi_front=(674, 16, 143, 30), roi_back=(674, 16, 143, 30),
+        name="asset_snapshot_stamina_detail",
+    )
+    I_STAMINA_DETAIL = RuleImage(
+        roi_front=(420, 130, 80, 35), roi_back=(414, 122, 105, 51),
+        threshold=0.90, method="Template matching",
+        file="./tasks/AssetSnapshot/assets/stamina_detail_title.png",
+    )
+    O_STAMINA_DETAIL_NAME = RuleOcr(
+        roi=(420, 130, 120, 35), area=(420, 130, 120, 35),
+        mode="Single", method="Default", keyword="",
+        name="asset_snapshot_stamina_detail_name",
+    )
+    O_STAMINA_DETAIL_OWNED = RuleOcr(
+        roi=(420, 164, 190, 34), area=(420, 164, 190, 34),
+        mode="Single", method="Default", keyword="",
+        name="asset_snapshot_stamina_detail_owned",
+    )
+    C_STAMINA_DETAIL_CLOSE = RuleClick(
+        roi_front=(970, 550, 190, 75), roi_back=(970, 550, 190, 75),
+        name="asset_snapshot_stamina_detail_close",
+    )
+
     MATERIAL_RULES = [
         RuleImage(
             roi_front=(0, 0, *MATERIAL_MATCH_TEMPLATE_SIZE),
@@ -144,4 +169,29 @@ class AssetSnapshotAssets:
         method="Default",
         keyword="",
         name="asset_snapshot_detail_hold",
+    )
+
+    I_SKIN_TICKET_BODY = RuleImage(
+        roi_front=(0, 0, 67, 45),
+        roi_back=MATERIAL_GRID_ROI,
+        threshold=0.90,
+        method="Template matching",
+        file="./tasks/AssetSnapshot/assets/skin_ticket_body.png",
+    )
+    I_SP_TICKET_BADGE = RuleImage(
+        roi_front=(0, 0, 30, 17),
+        roi_back=MATERIAL_GRID_ROI,
+        threshold=0.80,
+        method="Template matching",
+        file="./tasks/AssetSnapshot/assets/sp_ticket_badge.png",
+    )
+    O_TICKET_DETAIL_NAME = RuleOcr(
+        roi=(855, 110, 250, 39), area=(855, 110, 250, 39),
+        mode="Single", method="Default", keyword="",
+        name="asset_snapshot_ticket_detail_name",
+    )
+    O_TICKET_DETAIL_QUANTITY = RuleOcr(
+        roi=(930, 148, 180, 36), area=(930, 148, 180, 36),
+        mode="Single", method="Default", keyword="",
+        name="asset_snapshot_ticket_detail_quantity",
     )

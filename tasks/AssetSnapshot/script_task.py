@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import time
 import re
+from copy import copy
 from datetime import datetime
 from pathlib import Path
 from typing import Mapping
@@ -24,12 +25,22 @@ from tasks.AssetSnapshot.asset_snapshot import (
     MATERIAL_SWIPE_END,
     MATERIAL_SWIPE_START,
     normalize_quantity,
+    parse_stamina_detail_quantity,
+    parse_top_resource_quantity,
     quantity_roi_from_card_match,
     scroll_boundary_state,
 )
 from tasks.AssetSnapshot.assets import AssetSnapshotAssets
 from tasks.AssetSnapshot.config import AssetSnapshotConfig
 from tasks.AssetSnapshot.history import SnapshotStore
+from tasks.AssetSnapshot.skin_tickets import (
+    SKIN_TICKET_VARIABLES,
+    TICKET_BODY_OFFSET,
+    SkinTicketCandidate,
+    classify_skin_ticket,
+    skin_ticket_name,
+    skin_ticket_selected,
+)
 from tasks.AssetSnapshot.page import page_inventory
 from tasks.GameUi.page import page_main
 from tasks.Component.Login.service import LoginService
@@ -100,6 +111,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         self.match_score_records = []
         self.quantity_observations = {}
         self.quantity_match_scores = {}
+        self.ticket_detail_cache = {}
         self.scan_category = category
         self.screenshot()
         if not self.appear(self.I_CHECK_INVENTORY):
@@ -145,20 +157,86 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
     def _scan_top_resources(self) -> dict[str, int]:
         values = {}
         for variable_name, rule in self.TOP_RESOURCE_OCR.items():
-            raw = rule.ocr(self.device.image)
-            quantity = self._parse_ocr_quantity(raw)
-            if quantity is None:
-                # Right-aligned single digits need a tighter crop than multi-digit values.
-                retry_roi = (1185, 12, 30, 40) if variable_name == "soul_jade" else rule.roi
-                fallback = RuleOcr(roi=retry_roi, area=retry_roi, mode="Single", method="Default",
-                                   keyword="", name=f"asset_snapshot_{variable_name}_retry")
-                quantity = self._parse_ocr_quantity(fallback.ocr(self.device.image))
-                if variable_name == "soul_jade" and quantity != 0:
+            x, y, width, height = rule.roi
+            # Change vertical padding without dropping any leading/trailing digits.
+            retry_rois = ((x - 4, y - 4, width + 4, height + 8),
+                          (x - 4, y + 4, width + 4, height - 8))
+            if variable_name == "soul_jade":
+                retry_rois = ((1185, 12, 30, 40), (1185, 10, 30, 44))
+            for attempt, roi in enumerate((rule.roi, *retry_rois)):
+                if attempt:
+                    time.sleep(self.settle_seconds)
+                    self._refresh_inventory_frame(f"top resource {variable_name} retry {attempt}")
+                    if not self.appear(self.I_CHECK_INVENTORY):
+                        raise ScriptError("重试顶部资源 OCR 期间离开纳物库，保留旧历史")
+                    current_rule = RuleOcr(
+                        roi=roi, area=roi, mode="Single", method="Default",
+                        keyword="", name=f"asset_snapshot_{variable_name}_retry_{attempt}",
+                    )
+                else:
+                    current_rule = rule
+                raw = current_rule.ocr(self.device.image)
+                quantity = parse_top_resource_quantity(raw)
+                # The narrow soul-jade fallback can only verify a single zero.
+                if attempt and variable_name == "soul_jade" and quantity != 0:
                     quantity = None
-            if quantity is None:
+                if quantity is not None:
+                    if variable_name == "stamina":
+                        quantity = self._read_stamina_detail()
+                    values[variable_name] = quantity
+                    logger.info(
+                        f"AssetSnapshot top resource={variable_name} raw={raw!r} "
+                        f"quantity={quantity} roi={roi} attempt={attempt}"
+                    )
+                    break
+                logger.warning(
+                    f"AssetSnapshot rejected top resource={variable_name} "
+                    f"raw={raw!r} roi={roi} attempt={attempt}"
+                )
+            else:
                 raise ScriptError(f"顶部资源 OCR 未能读取: {variable_name}")
-            values[variable_name] = quantity
         return values
+
+    def _read_stamina_detail(self) -> int:
+        if not self.appear(self.I_STAMINA_DETAIL):
+            self.device.click_record_clear()
+            self.click(self.C_STAMINA_DETAIL)
+        try:
+            previous = None
+            for _ in range(4):
+                time.sleep(0.3)
+                self._refresh_inventory_frame("stamina detail")
+                if not self.appear(self.I_CHECK_INVENTORY):
+                    raise ScriptError("读取体力详情期间离开纳物库，保留旧历史")
+                if not self.appear(self.I_STAMINA_DETAIL):
+                    previous = None
+                    continue
+                name = str(self.O_STAMINA_DETAIL_NAME.ocr(self.device.image)).strip()
+                if name != "体力":
+                    previous = None
+                    continue
+                raw = self.O_STAMINA_DETAIL_OWNED.ocr(self.device.image)
+                quantity = parse_stamina_detail_quantity(raw)
+                logger.info(f"AssetSnapshot stamina detail raw={raw!r} quantity={quantity}")
+                if quantity is not None and quantity == previous:
+                    return quantity
+                previous = quantity
+            raise ScriptError("体力详情未能确认精确数量，保留旧历史")
+        finally:
+            self._close_stamina_detail()
+
+    def _close_stamina_detail(self) -> None:
+        for _ in range(3):
+            if not self.appear(self.I_CHECK_INVENTORY):
+                raise ScriptError("关闭体力详情期间离开纳物库，保留旧历史")
+            if not self.appear(self.I_STAMINA_DETAIL):
+                return
+            self.device.click_record_clear()
+            self.click(self.C_STAMINA_DETAIL_CLOSE)
+            time.sleep(0.3)
+            self._refresh_inventory_frame("close stamina detail")
+        if not self.appear(self.I_CHECK_INVENTORY) or self.appear(self.I_STAMINA_DETAIL):
+            raise ScriptError("无法确认体力详情已关闭，停止扫描并保留旧历史")
 
     def _scan_material_pages(self, values: dict[str, int]) -> bool:
         previous_signature = None
@@ -181,13 +259,14 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             matches = self._find_material_matches(page_index)
             for rule, score, area in matches:
                 variable_name = self.MATERIAL_RULE_TO_VARIABLE[id(rule)]
-                quantity = self._read_material_quantity(area)
+                quantity = self._read_material_quantity(area, variable_name=variable_name)
                 if quantity is not None and score > self.quantity_match_scores.get(variable_name, -1.0):
                     values[variable_name] = quantity
                     self.quantity_observations[variable_name] = quantity
                     self.quantity_match_scores[variable_name] = score
                 logger.debug(f"AssetSnapshot material={variable_name} score={score:.6f} quantity={quantity} area={area}")
 
+            self._scan_skin_tickets(values, page_index)
             boundary = self._scroll_boundary_state()
             if boundary == "bottom":
                 logger.info("AssetSnapshot material grid reached bottom marker")
@@ -209,8 +288,13 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         text = str(raw).strip() if raw is not None else ""
         return normalize_quantity(raw) if re.search(r"[0-9OoIl丨]", text) else None
 
-    def _read_material_quantity(self, match_area: tuple[int, int, int, int]) -> int | None:
-        roi = quantity_roi_from_card_match(match_area)
+    def _read_material_quantity(
+        self,
+        match_area: tuple[int, int, int, int],
+        *,
+        variable_name: str | None = None,
+    ) -> int | None:
+        roi = quantity_roi_from_card_match(match_area, variable_name=variable_name)
         # The inventory fades out the last row at y=660, above the panel boundary.
         visible_height = min(roi[3], 660 - roi[1])
         if visible_height < 18:
@@ -243,6 +327,8 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             score = float(result.get("score", 0.0))
             roi_front = result.get("roi_front")
             status = classify_match_score(score, self.material_match_threshold)
+            if variable_name in SKIN_TICKET_VARIABLES and status == "accepted":
+                status = "candidate"
             record = {
                 "page": page_index + 1,
                 "variable_name": variable_name,
@@ -254,7 +340,8 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                     int(value) for value in roi_front
                 ]
             self.match_score_records.append(record)
-            if status == "accepted" and roi_front is not None:
+            if (status == "accepted" and roi_front is not None
+                    and variable_name not in SKIN_TICKET_VARIABLES):
                 matches.append(
                     (
                         rule,
@@ -263,6 +350,124 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                     )
                 )
         return sorted(matches, key=lambda item: item[2][1])
+
+    @staticmethod
+    def _ticket_region_rule(rule, roi):
+        regional = copy(rule)
+        regional.roi_back = roi
+        return regional
+
+    def _find_skin_ticket_candidates(self, page_index: int) -> list[SkinTicketCandidate]:
+        self._refresh_inventory_frame("skin ticket candidates")
+        result = self._image_request_with_frame_retry(
+            "match_all_any", purpose="skin ticket body",
+            rule_data=self.I_SKIN_TICKET_BODY.to_service_payload(),
+            nms_threshold=0.3,
+        )
+        ticket_rules = {
+            self.MATERIAL_RULE_TO_VARIABLE[id(rule)]: rule
+            for rule in self.MATERIAL_RULES
+            if self.MATERIAL_RULE_TO_VARIABLE[id(rule)] in SKIN_TICKET_VARIABLES
+        }
+        candidates = []
+        grid_x, grid_y, grid_w, grid_h = self.MATERIAL_GRID_ROI
+        for body_score, body_x, body_y, _, _ in result.get("matches", []):
+            x, y = int(body_x) - TICKET_BODY_OFFSET[0], int(body_y) - TICKET_BODY_OFFSET[1]
+            left, top = max(grid_x, x - 8), max(grid_y, y - 5)
+            right, bottom = min(grid_x + grid_w, x + 103), min(grid_y + grid_h, y + 75)
+            if right - left < 95 or bottom - top < 70:
+                continue
+            roi = (left, top, right - left, bottom - top)
+            normal, sp = self._match_many_with_frame_retry(
+                [self._ticket_region_rule(ticket_rules[name], roi)
+                 for name in ("skin_ticket", "sp_skin_ticket")],
+                purpose="skin ticket alternatives", threshold=0.0,
+            )
+            best = max((normal, sp), key=lambda item: item["score"])
+            area = tuple(int(v) for v in best["roi_front"])
+            badge_score = None
+            if area[1] >= grid_y and area[1] + 76 <= 660:
+                badge_roi = (area[0] + 47, area[1] + 50, 43, 26)
+                badge = self._match_many_with_frame_retry(
+                    [self._ticket_region_rule(self.I_SP_TICKET_BADGE, badge_roi)],
+                    purpose="SP ticket badge", threshold=0.0,
+                )[0]
+                badge_score = float(badge["score"])
+            normal_score, sp_score = float(normal["score"]), float(sp["score"])
+            candidates.append(SkinTicketCandidate(
+                area, float(body_score), normal_score, sp_score, badge_score,
+                classify_skin_ticket(normal_score, sp_score, badge_score),
+            ))
+        return sorted(candidates, key=lambda candidate: candidate.area[1])
+
+    def _scan_skin_tickets(self, values: dict[str, int], page_index: int) -> None:
+        for candidate in self._find_skin_ticket_candidates(page_index):
+            variable = candidate.variable_name
+            record = {
+                "page": page_index + 1, "kind": "skin_ticket_verification",
+                "variable_name": variable, "body_score": candidate.body_score,
+                "normal_score": candidate.normal_score, "sp_score": candidate.sp_score,
+                "badge_score": candidate.badge_score, "area": list(candidate.area),
+            }
+            self.match_score_records.append(record)
+            quantity = None
+            if variable == "skin_ticket":
+                quantity = self._read_material_quantity(candidate.area, variable_name=variable)
+            elif variable == "sp_skin_ticket":
+                quantity = self.ticket_detail_cache.get(variable)
+            if quantity is None:
+                detail = self._read_skin_ticket_detail(candidate.area, expected_variable=variable)
+                if detail is None:
+                    record["status"] = "detail_failed"
+                    raise ScriptError("无法确认皮肤券类型或数量，保留旧历史，下次重试")
+                variable, quantity = detail
+                self.ticket_detail_cache[variable] = quantity
+            record.update(variable_name=variable, quantity=quantity, status="accepted")
+            score = candidate.score_for(variable)
+            if score > self.quantity_match_scores.get(variable, -1.0):
+                values[variable] = quantity
+                self.quantity_observations[variable] = quantity
+                self.quantity_match_scores[variable] = score
+            logger.info(
+                f"AssetSnapshot ticket={variable} quantity={quantity} "
+                f"score={score:.6f} SP_badge_score={candidate.badge_score}"
+            )
+
+    def _read_skin_ticket_detail(
+        self,
+        area: tuple[int, int, int, int],
+        *,
+        expected_variable: str | None,
+    ) -> tuple[str, int] | None:
+        self.device.click_record_clear()
+        self.device.click(area[0] + 45, area[1] + 30, control_name="asset_snapshot_ticket_detail")
+        previous = None
+        for _ in range(3):
+            time.sleep(0.4)
+            self._refresh_inventory_frame("skin ticket detail")
+            if not self.appear(self.I_CHECK_INVENTORY):
+                raise ScriptError("读取皮肤券详情期间离开纳物库，保留旧历史")
+            if not skin_ticket_selected(self.device.image, area):
+                previous = None
+                continue
+            variable = skin_ticket_name(self.O_TICKET_DETAIL_NAME.ocr(self.device.image))
+            if variable is None or (expected_variable is not None and variable != expected_variable):
+                previous = None
+                continue
+            boxes = self.O_TICKET_DETAIL_QUANTITY.detect_and_ocr(self.device.image)
+            text = "".join(str(box.ocr_text).strip() for box in boxes)
+            if not re.fullmatch(r"\d+(?:\.\d+)?[万亿千]?", text):
+                previous = None
+                continue
+            reading = (variable, normalize_quantity(text))
+            logger.info(
+                f"AssetSnapshot ticket detail={variable} quantity={reading[1]} "
+                f"OCR_scores={[round(float(box.score), 6) for box in boxes]}"
+            )
+            if reading == previous:
+                return reading
+            previous = reading
+        return None
 
     def _write_match_score_diagnostics(self) -> None:
         output = Path("log/asset_snapshot_material_match_scores.json")
@@ -341,14 +546,18 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         threshold: float | None = None,
     ) -> list[dict]:
         """在同一截图帧上批量匹配，遇到失效帧时刷新并重试一次。"""
-        rules_data = [rule.to_service_payload() for rule in rules]
+        return self._image_request_with_frame_retry(
+            "match_many", purpose=purpose,
+            rules_data=[rule.to_service_payload() for rule in rules], threshold=threshold,
+        )
+
+    def _image_request_with_frame_retry(self, method: str, *, purpose: str, **kwargs):
         for attempt in range(2):
             try:
-                return get_image_client().match_many(
-                    rules_data=rules_data,
+                return getattr(get_image_client(), method)(
                     image=self.device.image,
                     frame_id=self.device.image_frame_id,
-                    threshold=threshold,
+                    **kwargs,
                 )
             except Exception as error:
                 if not self._is_unknown_frame_error(error) or attempt:

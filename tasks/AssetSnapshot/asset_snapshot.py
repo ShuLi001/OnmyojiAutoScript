@@ -14,6 +14,8 @@ CELL_SIZE = (95, 95)
 MATERIAL_MATCH_TEMPLATE_SIZE = (95, 70)
 ICON_IN_CELL_OFFSET = (7, 7)
 QUANTITY_RELATIVE_TO_CELL = (40, 64, 55, 31)
+# Exclude the artwork lettering next to the quantity on this card.
+MATERIAL_QUANTITY_ROI_OVERRIDES = {"myriad_soul": (67, 70, 27, 23)}
 SWIPE_ROWS = 3.5
 SWIPE_RANDOM_X_OFFSET = 18
 SWIPE_RANDOM_Y_OFFSET = 10
@@ -68,9 +70,16 @@ def quantity_roi_from_match(match_area: tuple[int, int, int, int]) -> tuple[int,
     return quantity_roi_from_cell((cell_x, cell_y))
 
 
-def quantity_roi_from_card_match(match_area: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
+def quantity_roi_from_card_match(
+    match_area: tuple[int, int, int, int],
+    *,
+    variable_name: str | None = None,
+) -> tuple[int, int, int, int]:
     """Derive the quantity crop from a 95x70 material template match."""
-    return quantity_roi_from_cell((match_area[0], match_area[1]))
+    rel_x, rel_y, width, height = MATERIAL_QUANTITY_ROI_OVERRIDES.get(
+        variable_name, QUANTITY_RELATIVE_TO_CELL,
+    )
+    return match_area[0] + rel_x, match_area[1] + rel_y, width, height
 
 
 def build_swipe_points(
@@ -106,6 +115,20 @@ def scroll_boundary_state(*, top: bool, bottom: bool) -> str:
 
 def classify_match_score(score: float, threshold: float = 0.95) -> str:
     return "accepted" if float(score) >= threshold else "below_threshold"
+
+
+def parse_top_resource_quantity(raw: object) -> int | None:
+    text = str(raw).strip() if raw is not None else ""
+    # Do not turn an OCR error such as a Chinese prefix into a numeric suffix.
+    if not re.fullmatch(r"(?:[0-9]+|[0-9]{1,3}(?:[,，][0-9]{3})+)(?:\.[0-9]+)?[万亿千]?", text):
+        return None
+    return normalize_quantity(text)
+
+
+def parse_stamina_detail_quantity(raw: object) -> int | None:
+    text = str(raw).strip() if raw is not None else ""
+    match = re.fullmatch(r"已拥有\s*[:：]\s*([0-9]+)", text)
+    return int(match.group(1)) if match else None
 
 
 def normalize_quantity(raw: object) -> int:
