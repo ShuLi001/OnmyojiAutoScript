@@ -165,6 +165,9 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         assets = {}
         for name, quantity in values.items():
             previous = previous_assets.get(name, {})
+            last_quantity = previous.get('quantity')
+            if last_quantity is None:
+                last_quantity = (previous_values or {}).get(name)
             if name == "eternal_divine_talisman":
                 item = {"source": "unsupported", "precision": "unknown", "readStatus": "unsupported"}
             elif name in observed:
@@ -172,10 +175,13 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                         "observedAt": payload["updatedAt"], **self.observation_metadata.get(name, {})}
             else:
                 item = {**previous, "source": "carried" if category == "recent" else "assumed_zero",
-                        "readStatus": "ocr_failed" if name in self.read_failures else "not_seen", "quantity": previous.get("quantity"),
+                        "readStatus": "ocr_failed" if name in self.read_failures else "not_seen", "quantity": last_quantity,
                         "observedAt": previous.get("observedAt"), "precision": previous.get("precision", "unknown")}
             item.setdefault("quantity", quantity)
+            if name not in observed and name != 'eternal_divine_talisman' and last_quantity is not None:
+                values[name] = last_quantity
             assets[name] = item
+        payload['values'] = dict(values)
         payload["assets"] = assets
         logger.info(f"AssetSnapshot payload: {json.dumps(payload, ensure_ascii=False, sort_keys=True)}")
         return payload
