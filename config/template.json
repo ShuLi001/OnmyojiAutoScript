@@ -1982,6 +1982,8 @@
     },
     "asset_snapshot_config": {
       "force_full_scan": false,
+      "full_scan_interval_hours": 0,
+      "history_generation": 0,
       "max_reset_swipes": 3,
       "max_scan_swipes": 10,
       "match_threshold": 0.95

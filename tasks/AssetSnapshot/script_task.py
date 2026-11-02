@@ -5,6 +5,8 @@ import time
 import re
 from copy import copy
 from datetime import datetime
+from uuid import uuid4
+from decimal import Decimal
 from pathlib import Path
 from typing import Mapping
 
@@ -33,6 +35,7 @@ from tasks.AssetSnapshot.asset_snapshot import (
 from tasks.AssetSnapshot.assets import AssetSnapshotAssets
 from tasks.AssetSnapshot.config import AssetSnapshotConfig
 from tasks.AssetSnapshot.history import SnapshotStore
+from tasks.AssetSnapshot.repository import parse_time, utc_now
 from tasks.AssetSnapshot.skin_tickets import (
     SKIN_TICKET_VARIABLES,
     TICKET_BODY_OFFSET,
@@ -69,6 +72,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             str(self.config.script.device.serial),
             str(self.config.restart.login_character_config.character),
             self.VARIABLE_MAPPING,
+            generation=getattr(self._settings(), "history_generation", 0),
         )
 
     def _prepare_game(self) -> None:
@@ -82,7 +86,15 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
     def execute_workflow(self) -> dict[str, object]:
         store = self._snapshot_store()
         history = store.load()
-        category = "composite" if history is None or self._settings().force_full_scan else "recent"
+        settings = self._settings()
+        interval = getattr(settings, "full_scan_interval_hours", 0)
+        expired = bool(history and interval and
+                       (parse_time(utc_now()) - parse_time(history["fullScanCompletedAt"])).total_seconds()
+                       >= interval * 3600)
+        category = "composite" if (history is None or settings.force_full_scan or expired
+                                   or history.get("origin") == "legacy") else "recent"
+        self.previous_assets = history["snapshot"].get("assets", {}) if history else {}
+        self.workflow_run_id = getattr(self, "capture_run_id", None) or str(uuid4())
         self._prepare_game()
         payload = None
         try:
@@ -94,7 +106,10 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         finally:
             # Do not establish a baseline until both scanning and courtyard return succeed.
             self.goto_page(page_main, skip_first_screenshot=False)
-        store.save(payload, category, history)
+        payload["runId"] = self.workflow_run_id
+        saved = store.save(payload, category, history)
+        if isinstance(saved, dict):
+            payload["snapshotId"] = saved["snapshotId"]
         logger.info(f"AssetSnapshot saved {category} snapshot: {store.path}")
         return payload
 
@@ -110,6 +125,9 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         self.material_match_threshold = settings.match_threshold
         self.match_score_records = []
         self.quantity_observations = {}
+        self.observation_metadata = {}
+        self.quantity_read_metadata = {}
+        self.read_failures = set()
         self.quantity_match_scores = {}
         self.ticket_detail_cache = {}
         self.scan_category = category
@@ -122,17 +140,43 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
 
         values = (merge_snapshot_values(self.VARIABLE_MAPPING, previous_values)
                   if category == "recent" else build_empty_snapshot(self.VARIABLE_MAPPING))
-        values.update(self._scan_top_resources())
+        top_values = self._scan_top_resources()
+        values.update(top_values)
         try:
             if not self._scan_material_pages(values):
                 raise ScriptError("纳物库扫描达到滑动上限，保留旧历史，下次重试")
+            missing_positive = [name for name, count in (previous_values or {}).items()
+                                if count > 0 and name not in top_values and name not in self.quantity_observations
+                                and name != "eternal_divine_talisman"]
+            if category == "composite" and missing_positive:
+                logger.info(f"AssetSnapshot recheck missing historical materials: {missing_positive}")
+                self._reset_material_grid_to_top()
+                if not self._scan_material_pages(values):
+                    raise ScriptError("综合复查未完成，保留旧历史")
         finally:
             self._write_match_score_diagnostics()
         values["eternal_divine_talisman"] = 0
         payload = build_snapshot_payload(
             values,
-            updated_at=datetime.now().replace(microsecond=0).isoformat(),
+            updated_at=utc_now(),
         )
+        observed = {**top_values, **self.quantity_observations}
+        previous_assets = getattr(self, "previous_assets", {})
+        assets = {}
+        for name, quantity in values.items():
+            previous = previous_assets.get(name, {})
+            if name == "eternal_divine_talisman":
+                item = {"source": "unsupported", "precision": "unknown", "readStatus": "unsupported"}
+            elif name in observed:
+                item = {"source": "observed", "precision": "exact", "readStatus": "ok",
+                        "observedAt": payload["updatedAt"], **self.observation_metadata.get(name, {})}
+            else:
+                item = {**previous, "source": "carried" if category == "recent" else "assumed_zero",
+                        "readStatus": "ocr_failed" if name in self.read_failures else "not_seen", "quantity": previous.get("quantity"),
+                        "observedAt": previous.get("observedAt"), "precision": previous.get("precision", "unknown")}
+            item.setdefault("quantity", quantity)
+            assets[name] = item
+        payload["assets"] = assets
         logger.info(f"AssetSnapshot payload: {json.dumps(payload, ensure_ascii=False, sort_keys=True)}")
         return payload
 
@@ -184,6 +228,15 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                     if variable_name == "stamina":
                         quantity = self._read_stamina_detail()
                     values[variable_name] = quantity
+                    text = str(raw).strip()
+                    unit = {"万": 10000, "亿": 100000000, "千": 1000}.get(text[-1:] or "")
+                    decimals = len(text[:-1].split(".")[-1]) if unit and "." in text else 0
+                    if hasattr(self, "observation_metadata"):
+                        self.observation_metadata[variable_name] = {
+                            "observedAt": utc_now(), "precision": "display_quantized" if unit and variable_name != "stamina" else "exact",
+                            "displayUnitStep": max(1, int(Decimal(unit) / (10 ** decimals))) if unit and variable_name != "stamina" else None,
+                            "rawText": text,
+                        }
                     logger.info(
                         f"AssetSnapshot top resource={variable_name} raw={raw!r} "
                         f"quantity={quantity} roi={roi} attempt={attempt}"
@@ -260,9 +313,13 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             for rule, score, area in matches:
                 variable_name = self.MATERIAL_RULE_TO_VARIABLE[id(rule)]
                 quantity = self._read_material_quantity(area, variable_name=variable_name)
+                if quantity is None and hasattr(self, 'read_failures'):
+                    self.read_failures.add(variable_name)
                 if quantity is not None and score > self.quantity_match_scores.get(variable_name, -1.0):
                     values[variable_name] = quantity
                     self.quantity_observations[variable_name] = quantity
+                    if hasattr(self, "observation_metadata"):
+                        self.observation_metadata[variable_name] = getattr(self, 'quantity_read_metadata', {}).get(variable_name, {"observedAt": utc_now()})
                     self.quantity_match_scores[variable_name] = score
                 logger.debug(f"AssetSnapshot material={variable_name} score={score:.6f} quantity={quantity} area={area}")
 
@@ -310,7 +367,20 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         )
         # Keep the detector's number box: whole-line OCR also reads artwork lettering.
         boxes = rule.detect_and_ocr(self.device.image)
-        return self._parse_ocr_quantity(boxes[0].ocr_text) if boxes else None
+        raw = boxes[0].ocr_text if boxes else None
+        result = self._parse_ocr_quantity(raw)
+        if result is not None and variable_name and hasattr(self, 'quantity_read_metadata'):
+            self.quantity_read_metadata[variable_name] = self._quantity_metadata(raw)
+        return result
+
+    @staticmethod
+    def _quantity_metadata(raw):
+        text = str(raw).strip()
+        unit = {"万": 10000, "亿": 100000000, "千": 1000}.get(text[-1:])
+        decimals = len(text[:-1].split('.')[-1]) if unit and '.' in text else 0
+        return {"observedAt": utc_now(), "rawText": text,
+                "precision": "display_quantized" if unit else "exact",
+                "displayUnitStep": max(1, int(Decimal(unit) / 10 ** decimals)) if unit else None}
 
     def _find_material_matches(
         self,
@@ -427,6 +497,8 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             if score > self.quantity_match_scores.get(variable, -1.0):
                 values[variable] = quantity
                 self.quantity_observations[variable] = quantity
+                if hasattr(self, "observation_metadata"):
+                    self.observation_metadata[variable] = getattr(self, 'quantity_read_metadata', {}).get(variable, {"observedAt": utc_now()})
                 self.quantity_match_scores[variable] = score
             logger.info(
                 f"AssetSnapshot ticket={variable} quantity={quantity} "
@@ -465,6 +537,8 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                 f"OCR_scores={[round(float(box.score), 6) for box in boxes]}"
             )
             if reading == previous:
+                if hasattr(self, 'quantity_read_metadata'):
+                    self.quantity_read_metadata[variable] = self._quantity_metadata(text)
                 return reading
             previous = reading
         return None

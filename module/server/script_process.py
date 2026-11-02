@@ -55,7 +55,7 @@ class ScriptProcess(ScriptWSManager):
             logger.warning(f'Script {self.config_name} is initialized')
         if self._process and self._process.is_alive():
             logger.warning(f'Script {self.config_name} is already running and first stop it')
-            self.stop()
+            await self.stop()
         self._process = _SCRIPT_PROCESS_CONTEXT.Process(
             target=func,
             args=(self.config_name, self.state_queue, self.log_pipe_in,),
@@ -163,7 +163,10 @@ def func(config: str, state_queue: multiprocessing.Queue, log_pipe_in) -> None:
         from script import Script
         script = Script(config_name=config)
         script.state_queue = state_queue
-        script.loop()
+        from tasks.AssetSnapshot.capture import device_lock
+        script.capture_lock_serial = str(script.config.script.device.serial)
+        with device_lock(script.config.script.device.serial):
+            script.loop()
     except SystemExit as e:
         logger.info(f'Script {config} process exit')
         logger.error(f'Error: {e}')

@@ -298,6 +298,9 @@ class Script:
         future = future + timedelta(seconds=1)
         self.config.start_watching()
         while 1:
+            from tasks.AssetSnapshot.capture import CaptureQueue, store_for
+            if CaptureQueue(store_for(self.config).repository).pending(self.config.script.device.serial):
+                return False
             if datetime.now() > future:
                 return True
             # if self.stop_event is not None:
@@ -306,7 +309,7 @@ class Script:
             #         logger.info(f"[{self.config_name}] exited. Reason: Update")
             #         exit(0)
 
-            time.sleep(5)
+            time.sleep(1)
 
             if self.config.should_reload():
                 return False
@@ -351,6 +354,13 @@ class Script:
         :return:
         """
         while True:
+            from tasks.AssetSnapshot.capture import consume_for, device_key
+            locked_serial = getattr(self, 'capture_lock_serial', str(self.config.script.device.serial))
+            if device_key(locked_serial) != device_key(self.config.script.device.serial):
+                raise RequestHumanTakeover('设备设置已改变，请停止后重新启动脚本')
+            if consume_for(self.config):
+                del_cached_property(self, 'config')
+                continue
             task = self.config.get_next()
             now = datetime.now()
             antiban_wake = self.anti_ban_guard.wake_time(now, self.config.script.anti_ban)
