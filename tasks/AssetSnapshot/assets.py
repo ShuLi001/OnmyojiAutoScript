@@ -146,6 +146,32 @@ class AssetSnapshotAssets:
         name="asset_snapshot_stamina_detail_close",
     )
 
+    # ADB coordinates: include the jade icon and number field, exclude '+'.
+    C_JADE_DETAIL = RuleClick(
+        roi_front=(876, 16, 143, 30), roi_back=(876, 16, 143, 30),
+        name="asset_snapshot_jade_detail",
+    )
+    I_JADE_DETAIL = RuleImage(
+        roi_front=(624, 130, 80, 35), roi_back=(618, 122, 105, 51),
+        threshold=0.90, method="Template matching",
+        file="./tasks/AssetSnapshot/assets/jade_detail_title.png",
+    )
+    O_JADE_DETAIL_NAME = RuleOcr(
+        roi=(624, 130, 120, 35), area=(624, 130, 120, 35),
+        mode="Single", method="Default", keyword="",
+        name="asset_snapshot_jade_detail_name",
+    )
+    O_JADE_DETAIL_OWNED = RuleOcr(
+        roi=(624, 164, 190, 34), area=(624, 164, 190, 34),
+        mode="Single", method="Default", keyword="",
+        name="asset_snapshot_jade_detail_owned",
+    )
+    # The gutter between category buttons and cards cannot activate an item.
+    C_JADE_DETAIL_CLOSE = RuleClick(
+        roi_front=(240, 540, 22, 100), roi_back=(240, 540, 22, 100),
+        name="asset_snapshot_jade_detail_close",
+    )
+
     MATERIAL_RULES = [
         RuleImage(
             roi_front=(0, 0, *MATERIAL_MATCH_TEMPLATE_SIZE),

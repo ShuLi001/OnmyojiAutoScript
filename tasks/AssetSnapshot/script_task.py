@@ -201,6 +201,9 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
     def _scan_top_resources(self) -> dict[str, int]:
         values = {}
         for variable_name, rule in self.TOP_RESOURCE_OCR.items():
+            if variable_name == "jade":
+                values[variable_name] = self._read_jade_detail()
+                continue
             x, y, width, height = rule.roi
             # Change vertical padding without dropping any leading/trailing digits.
             retry_rois = ((x - 4, y - 4, width + 4, height + 8),
@@ -251,45 +254,65 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         return values
 
     def _read_stamina_detail(self) -> int:
-        if not self.appear(self.I_STAMINA_DETAIL):
+        return self._read_resource_detail("stamina", "体力")
+
+    def _read_jade_detail(self) -> int:
+        return self._read_resource_detail("jade", "勾玉")
+
+    def _read_resource_detail(self, variable_name: str, display_name: str) -> int:
+        prefix = variable_name.upper()
+        marker = getattr(self, f"I_{prefix}_DETAIL")
+        name_rule = getattr(self, f"O_{prefix}_DETAIL_NAME")
+        owned_rule = getattr(self, f"O_{prefix}_DETAIL_OWNED")
+        if not self.appear(marker):
             self.device.click_record_clear()
-            self.click(self.C_STAMINA_DETAIL)
+            self.click(getattr(self, f"C_{prefix}_DETAIL"))
         try:
             previous = None
             for _ in range(4):
                 time.sleep(0.3)
-                self._refresh_inventory_frame("stamina detail")
+                self._refresh_inventory_frame(f"{variable_name} detail")
                 if not self.appear(self.I_CHECK_INVENTORY):
-                    raise ScriptError("读取体力详情期间离开纳物库，保留旧历史")
-                if not self.appear(self.I_STAMINA_DETAIL):
+                    raise ScriptError(f"读取{display_name}详情期间离开纳物库，保留旧历史")
+                if not self.appear(marker):
                     previous = None
                     continue
-                name = str(self.O_STAMINA_DETAIL_NAME.ocr(self.device.image)).strip()
-                if name != "体力":
+                name = str(name_rule.ocr(self.device.image)).strip()
+                if name != display_name:
                     previous = None
                     continue
-                raw = self.O_STAMINA_DETAIL_OWNED.ocr(self.device.image)
+                raw = owned_rule.ocr(self.device.image)
                 quantity = parse_stamina_detail_quantity(raw)
-                logger.info(f"AssetSnapshot stamina detail raw={raw!r} quantity={quantity}")
+                logger.info(f"AssetSnapshot {variable_name} detail raw={raw!r} quantity={quantity}")
                 if quantity is not None and quantity == previous:
+                    if hasattr(self, "observation_metadata"):
+                        self.observation_metadata[variable_name] = {
+                            "observedAt": utc_now(), "precision": "exact",
+                            "displayUnitStep": None, "rawText": str(raw).strip(),
+                        }
                     return quantity
                 previous = quantity
-            raise ScriptError("体力详情未能确认精确数量，保留旧历史")
+            raise ScriptError(f"{display_name}详情未能确认精确数量，保留旧历史")
         finally:
-            self._close_stamina_detail()
+            self._close_resource_detail(variable_name, display_name)
 
     def _close_stamina_detail(self) -> None:
+        self._close_resource_detail("stamina", "体力")
+
+    def _close_resource_detail(self, variable_name: str, display_name: str) -> None:
+        marker = getattr(self, f"I_{variable_name.upper()}_DETAIL")
+        close = getattr(self, f"C_{variable_name.upper()}_DETAIL_CLOSE")
         for _ in range(3):
             if not self.appear(self.I_CHECK_INVENTORY):
-                raise ScriptError("关闭体力详情期间离开纳物库，保留旧历史")
-            if not self.appear(self.I_STAMINA_DETAIL):
+                raise ScriptError(f"关闭{display_name}详情期间离开纳物库，保留旧历史")
+            if not self.appear(marker):
                 return
             self.device.click_record_clear()
-            self.click(self.C_STAMINA_DETAIL_CLOSE)
+            self.click(close)
             time.sleep(0.3)
-            self._refresh_inventory_frame("close stamina detail")
-        if not self.appear(self.I_CHECK_INVENTORY) or self.appear(self.I_STAMINA_DETAIL):
-            raise ScriptError("无法确认体力详情已关闭，停止扫描并保留旧历史")
+            self._refresh_inventory_frame(f"close {variable_name} detail")
+        if not self.appear(self.I_CHECK_INVENTORY) or self.appear(marker):
+            raise ScriptError(f"无法确认{display_name}详情已关闭，停止扫描并保留旧历史")
 
     def _scan_material_pages(self, values: dict[str, int]) -> bool:
         previous_signature = None
