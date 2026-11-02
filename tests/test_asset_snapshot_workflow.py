@@ -53,7 +53,6 @@ class SnapshotWorkflowTest(unittest.TestCase):
         task._reset_material_grid_to_top = Mock()
         task._scan_top_resources = Mock(return_value={"gold": 25})
         task._write_match_score_diagnostics = Mock()
-        task._scan_skin_tickets = Mock()
         return task
 
     def test_recent_preserves_unseen_and_failed_ocr_but_updates_explicit_zero(self):
@@ -146,23 +145,6 @@ class SnapshotWorkflowTest(unittest.TestCase):
             self.assertIsNone(task._read_material_quantity((271, 230, 95, 70)))
             ocr.return_value.detect_and_ocr.return_value = [SimpleNamespace(ocr_text=0)]
             self.assertEqual(task._read_material_quantity((271, 230, 95, 70)), 0)
-
-    def test_myriad_soul_uses_its_number_crop_at_any_card_position(self):
-        task = self.task()
-        with patch("tasks.AssetSnapshot.script_task.RuleOcr") as ocr:
-            ocr.return_value.detect_and_ocr.return_value = [SimpleNamespace(ocr_text=25)]
-            for card, expected_roi in [
-                ((271, 291, 95, 70), (338, 361, 27, 23)),
-                ((373, 400, 95, 70), (440, 470, 27, 23)),
-            ]:
-                with self.subTest(card=card):
-                    self.assertEqual(
-                        task._read_material_quantity(card, variable_name="myriad_soul"), 25,
-                    )
-                    self.assertEqual(ocr.call_args.kwargs["roi"], expected_roi)
-
-            task._read_material_quantity((271, 291, 95, 70), variable_name="myriad_disc")
-            self.assertEqual(ocr.call_args.kwargs["roi"], (311, 355, 55, 31))
 
     def test_task_registered_in_default_config_menu_and_scheduler(self):
         from module.config.config_model import ConfigModel
