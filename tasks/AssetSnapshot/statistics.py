@@ -25,9 +25,31 @@ def history(documents, asset, report_date=None, days=7):
     end = date.fromisoformat(report_date) if report_date else datetime.now(STATISTICS_TZ).date()
     start = end - timedelta(days=days - 1)
     baseline = start - timedelta(days=1)
-    closes, observations = {}, []
+    closes, observations, records = {}, [], []
+    previous_item, last_quantity = None, None
     for doc in documents:
-        item = doc["snapshot"].get("assets", {}).get(asset)
+        snapshot = doc['snapshot']
+        item = snapshot.get('assets', {}).get(asset)
+        queried_at = snapshot['updatedAt']
+        query_stamp = parse_time(queried_at)
+        query_day = query_stamp.astimezone(STATISTICS_TZ).date()
+        quantity = item.get('quantity') if item else snapshot.get('values', {}).get(asset)
+        source = item.get('source', 'legacy_unknown') if item else 'legacy_unknown'
+        if source == 'unsupported':
+            quantity = None
+        elif quantity is None:
+            quantity = last_quantity
+        if type(quantity) is int:
+            last_quantity = quantity
+        diff = change(previous_item, item)
+        if start <= query_day <= end:
+            records.append({'snapshotId': doc['snapshotId'], 'queriedAt': query_stamp.isoformat(),
+                            'observedAt': item.get('observedAt') if item else None,
+                            'quantity': quantity, 'observed': valid(item), 'source': source,
+                            'precision': item.get('precision', 'unknown') if item else 'unknown',
+                            'delta': diff['delta'], 'approximate': diff['approximate'],
+                            'fromObservedAt': diff.get('fromObservedAt'), 'status': diff['status']})
+        previous_item = item
         if not valid(item):
             continue
         stamp = parse_time(item["observedAt"])
@@ -54,11 +76,13 @@ def history(documents, asset, report_date=None, days=7):
                "partialChange": partial, "observedDayCount": days - len(missing),
                "comparableDayCount": sum(d["delta"] is not None for d in daily),
                "missingDates": missing, "hasGaps": bool(missing),
+               "recordCount": len(records), "observedRecordCount": sum(r['observed'] for r in records),
+               "comparableRecordCount": sum(r['delta'] is not None for r in records),
                "fullScanCompletedAt": documents[-1].get("fullScanCompletedAt") if documents else None}
     return {"asset": asset, "window": {"startDate": start.isoformat(), "endDate": end.isoformat(),
             "reportDate": end.isoformat(), "timezone": "UTC+08:00",
             "asOfSnapshotId": documents[-1]["snapshotId"] if documents else None,
-            "todayProvisional": end == datetime.now(STATISTICS_TZ).date()}, "daily": daily, "summary": summary}
+            "todayProvisional": end == datetime.now(STATISTICS_TZ).date()}, "records": records, "daily": daily, "summary": summary}
 
 
 def latest_payload(documents, identity_id, compare="previous", report_date=None):
