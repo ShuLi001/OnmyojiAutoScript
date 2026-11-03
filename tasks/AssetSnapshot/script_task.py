@@ -26,6 +26,7 @@ from tasks.AssetSnapshot.asset_snapshot import (
     merge_snapshot_values,
     MATERIAL_SWIPE_END,
     MATERIAL_SWIPE_START,
+    UNSUPPORTED_MATERIAL_VARIABLES,
     normalize_quantity,
     parse_stamina_detail_quantity,
     parse_top_resource_quantity,
@@ -147,7 +148,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                 raise ScriptError("纳物库扫描达到滑动上限，保留旧历史，下次重试")
             missing_positive = [name for name, count in (previous_values or {}).items()
                                 if count > 0 and name not in top_values and name not in self.quantity_observations
-                                and name != "eternal_divine_talisman"]
+                                and name not in UNSUPPORTED_MATERIAL_VARIABLES]
             if category == "composite" and missing_positive:
                 logger.info(f"AssetSnapshot recheck missing historical materials: {missing_positive}")
                 self._reset_material_grid_to_top()
@@ -155,7 +156,8 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                     raise ScriptError("综合复查未完成，保留旧历史")
         finally:
             self._write_match_score_diagnostics()
-        values["eternal_divine_talisman"] = 0
+        for name in UNSUPPORTED_MATERIAL_VARIABLES:
+            values[name] = 0
         payload = build_snapshot_payload(
             values,
             updated_at=utc_now(),
@@ -168,7 +170,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             last_quantity = previous.get('quantity')
             if last_quantity is None:
                 last_quantity = (previous_values or {}).get(name)
-            if name == "eternal_divine_talisman":
+            if name in UNSUPPORTED_MATERIAL_VARIABLES:
                 item = {"source": "unsupported", "precision": "unknown", "readStatus": "unsupported"}
             elif name in observed:
                 item = {"source": "observed", "precision": "exact", "readStatus": "ok",
@@ -178,7 +180,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                         "readStatus": "ocr_failed" if name in self.read_failures else "not_seen", "quantity": last_quantity,
                         "observedAt": previous.get("observedAt"), "precision": previous.get("precision", "unknown")}
             item.setdefault("quantity", quantity)
-            if name not in observed and name != 'eternal_divine_talisman' and last_quantity is not None:
+            if name not in observed and name not in UNSUPPORTED_MATERIAL_VARIABLES and last_quantity is not None:
                 values[name] = last_quantity
             assets[name] = item
         payload['values'] = dict(values)

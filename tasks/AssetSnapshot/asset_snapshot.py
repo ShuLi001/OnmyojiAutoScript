@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Mapping
 
 TOP_RESOURCE_VARIABLES = frozenset({"gold", "stamina", "jade", "soul_jade"})
+UNSUPPORTED_MATERIAL_VARIABLES = frozenset({"eternal_divine_talisman", "limited_mystic_talisman"})
 
 MATERIAL_GRID_ROI = (271, 188, 505, 495)
 CELL_SIZE = (95, 95)
@@ -38,7 +39,7 @@ def material_variables(mapping: Mapping[str, str]) -> dict[str, str]:
     return {
         source_name: variable_name
         for source_name, variable_name in mapping.items()
-        if variable_name not in TOP_RESOURCE_VARIABLES
+        if variable_name not in TOP_RESOURCE_VARIABLES | UNSUPPORTED_MATERIAL_VARIABLES
     }
 
 

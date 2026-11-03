@@ -271,9 +271,14 @@
     "template_path": "material/大星糖.png",
     "full_cell_path": "full_cells/material/大星糖.png",
     "kind": "material",
-    "status": "fallback",
-    "source_page": null,
-    "source_coordinates": null,
+    "status": "captured",
+    "source_page": 4,
+    "source_coordinates": [
+      578,
+      432,
+      95,
+      95
+    ],
     "dimensions": [
       95,
       70
@@ -284,7 +289,7 @@
       54,
       25
     ],
-    "notes": "金平糖大星糖，游戏内库存为0，采用官方图标资产合成95x95标准卡片"
+    "notes": "实测截取自第 4 页核心区域 (578, 432)，四周边框闭合，无遮挡"
   },
   {
     "display_name": "低级苍龙鳞",
@@ -964,27 +969,6 @@
       25
     ],
     "notes": "实测截取自第 1 页核心区域 (373, 188)，四周边框闭合，无遮挡"
-  },
-  {
-    "display_name": "神秘的符咒_限时",
-    "variable_name": "limited_mystic_talisman",
-    "template_path": "material/神秘的符咒_限时.png",
-    "full_cell_path": "full_cells/material/神秘的符咒_限时.png",
-    "kind": "material",
-    "status": "fallback",
-    "source_page": null,
-    "source_coordinates": null,
-    "dimensions": [
-      95,
-      70
-    ],
-    "quantity_exclusion": [
-      40,
-      68,
-      54,
-      25
-    ],
-    "notes": "限时神秘符咒，游戏内库存为0，采用官方图标资产合成95x95标准卡片"
   },
   {
     "display_name": "式神挑战券",
@@ -1741,11 +1725,32 @@
     "template_path": "material/彩星糖.png",
     "full_cell_path": "full_cells/material/彩星糖.png",
     "kind": "material",
+    "status": "fallback",
+    "source_page": null,
+    "source_coordinates": null,
+    "dimensions": [
+      95,
+      70
+    ],
+    "quantity_exclusion": [
+      40,
+      68,
+      54,
+      25
+    ],
+    "notes": "金平糖彩星糖，游戏内库存为0，采用官方图标资产合成95x95标准卡片"
+  },
+  {
+    "display_name": "嗔念之卷",
+    "variable_name": "resentment_scroll",
+    "template_path": "material/嗔念之卷.png",
+    "full_cell_path": "full_cells/material/嗔念之卷.png",
+    "kind": "material",
     "status": "captured",
-    "source_page": 4,
+    "source_page": 1,
     "source_coordinates": [
-      578,
-      432,
+      271,
+      493,
       95,
       95
     ],
@@ -1759,28 +1764,7 @@
       54,
       25
     ],
-    "notes": "实测截取自第 4 页核心区域 (578, 432)，四周边框闭合，无遮挡"
-  },
-  {
-    "display_name": "嗔念之卷",
-    "variable_name": "resentment_scroll",
-    "template_path": "material/嗔念之卷.png",
-    "full_cell_path": "full_cells/material/嗔念之卷.png",
-    "kind": "material",
-    "status": "fallback",
-    "source_page": null,
-    "source_coordinates": null,
-    "dimensions": [
-      95,
-      70
-    ],
-    "quantity_exclusion": [
-      40,
-      68,
-      54,
-      25
-    ],
-    "notes": "御魂副本卷轴，游戏内库存为0，采用官方图标资产合成95x95标准卡片"
+    "notes": "实测截取自 2026-11-03_refresh 第 1 页核心区域 (271, 493)，四周边框闭合，无遮挡"
   },
   {
     "display_name": "贪念之卷",
@@ -1788,9 +1772,14 @@
     "template_path": "material/贪念之卷.png",
     "full_cell_path": "full_cells/material/贪念之卷.png",
     "kind": "material",
-    "status": "fallback",
-    "source_page": null,
-    "source_coordinates": null,
+    "status": "captured",
+    "source_page": 1,
+    "source_coordinates": [
+      681,
+      493,
+      95,
+      95
+    ],
     "dimensions": [
       95,
       70
@@ -1801,7 +1790,7 @@
       54,
       25
     ],
-    "notes": "御魂副本卷轴，游戏内库存为0，采用官方图标资产合成95x95标准卡片"
+    "notes": "实测截取自 2026-11-03_refresh 第 1 页核心区域 (681, 493)，四周边框闭合，无遮挡"
   },
   {
     "display_name": "红蓝应援券",

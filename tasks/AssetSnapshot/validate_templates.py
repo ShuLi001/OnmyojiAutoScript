@@ -21,7 +21,7 @@ TOP_DIR = TEMPLATES_DIR / 'top_resources'
 FULL_CELLS_TOP_DIR = TEMPLATES_DIR / 'full_cells/top_resources'
 QA_DIR = TEMPLATES_DIR / 'qa'
 RAW_PAGES_DIR = QA_DIR / 'raw_pages'
-DISABLED_TEMPLATE_DISPLAY_NAMES = {'神眷符咒_永恒'}
+DISABLED_TEMPLATE_DISPLAY_NAMES = {'神眷符咒_永恒', '神秘的符咒_限时'}
 
 print('=======================================================')
 print('   纳物库模板资产与清单只读校验 (Read-Only Validation)')
@@ -50,9 +50,10 @@ if not CATALOG_JSON.exists():
 with open(CATALOG_JSON, 'r', encoding='utf-8') as f:
     catalog = json.load(f)
 
-print(f'2. 模板清单条目数: {len(catalog)} 条记录 (期望 72)')
-if len(catalog) != 72:
-    errors.append(f'Catalog length is {len(catalog)}, expected 72')
+expected_count = len(mapping) - len(DISABLED_TEMPLATE_DISPLAY_NAMES)
+print(f'2. 模板清单条目数: {len(catalog)} 条记录 (期望 {expected_count})')
+if len(catalog) != expected_count:
+    errors.append(f'Catalog length is {len(catalog)}, expected {expected_count}')
 
 # 3. Check 1-to-1 correspondence
 catalog_by_var = {}
