@@ -51,7 +51,9 @@ class AssetSnapshotContractTest(unittest.TestCase):
         )
 
     def test_material_rules_use_gemini_templates_and_high_threshold(self):
-        self.assertEqual(len(AssetSnapshotAssets.MATERIAL_RULES), 68)
+        self.assertEqual(len(AssetSnapshotAssets.MATERIAL_RULES), 69)
+        self.assertEqual(len(set(AssetSnapshotAssets.MATERIAL_RULE_TO_VARIABLE.values())), 67)
+        self.assertNotIn("limited_mystic_talisman", AssetSnapshotAssets.MATERIAL_RULE_TO_VARIABLE.values())
         self.assertTrue(
             all(
                 "tasks/AssetSnapshot/assets/templates/material/" in rule.file
@@ -60,6 +62,13 @@ class AssetSnapshotContractTest(unittest.TestCase):
         )
         self.assertTrue(all(rule.threshold >= 0.95 for rule in AssetSnapshotAssets.MATERIAL_RULES))
         self.assertTrue(all(rule.roi_front[2:] == list(MATERIAL_MATCH_TEMPLATE_SIZE) for rule in AssetSnapshotAssets.MATERIAL_RULES))
+
+    def test_selected_mystic_template_updates_the_same_material(self):
+        rules = [rule for rule in AssetSnapshotAssets.MATERIAL_RULES
+                 if AssetSnapshotAssets.MATERIAL_RULE_TO_VARIABLE[id(rule)] == "mystic_talisman"]
+        self.assertEqual({Path(rule.file).name for rule in rules}, {"神秘的符咒.png", "神秘的符咒_选中.png"})
+        for rule in rules:
+            self.assertEqual(rule.image.shape[:2], (70, 95))
 
     def test_match_score_status_only_accepts_scores_at_or_above_threshold(self):
         self.assertEqual(classify_match_score(0.95), "accepted")

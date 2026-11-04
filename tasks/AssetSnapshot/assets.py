@@ -7,6 +7,7 @@ from module.atom.click import RuleClick
 from module.atom.image import RuleImage
 from module.atom.ocr import RuleOcr
 from module.atom.swipe import RuleSwipe
+from tasks.AssetSnapshot.quantity_ocr import InventoryQuantityOcr
 
 from tasks.AssetSnapshot.asset_snapshot import (
     MATERIAL_GRID_ROI,
@@ -26,6 +27,11 @@ MATERIAL_MAPPING = material_variables(VARIABLE_MAPPING)
 TEMPLATE_CATALOG = json.loads(TEMPLATE_CATALOG_PATH.read_text(encoding="utf-8"))
 MATERIAL_TEMPLATE_CATALOG = [
     entry for entry in TEMPLATE_CATALOG if entry["kind"] == "material"
+]
+MATERIAL_MATCH_TEMPLATES = [
+    (entry["variable_name"], path)
+    for entry in MATERIAL_TEMPLATE_CATALOG
+    for path in [entry["template_path"], *entry.get("variants", [])]
 ]
 
 class AssetSnapshotAssets:
@@ -110,7 +116,7 @@ class AssetSnapshotAssets:
     }
 
     TOP_RESOURCE_OCR = {
-        variable_name: RuleOcr(
+        variable_name: InventoryQuantityOcr(
             roi=roi,
             area=roi,
             mode="Single",
@@ -178,14 +184,14 @@ class AssetSnapshotAssets:
             roi_back=MATERIAL_GRID_ROI,
             threshold=0.95,
             method="Template matching",
-            file=f"./tasks/AssetSnapshot/assets/templates/{entry['template_path']}",
+            file=f"./tasks/AssetSnapshot/assets/templates/{template_path}",
         )
-        for entry in MATERIAL_TEMPLATE_CATALOG
+        for _, template_path in MATERIAL_MATCH_TEMPLATES
     ]
 
     MATERIAL_RULE_TO_VARIABLE = {
-        id(rule): entry["variable_name"]
-        for rule, entry in zip(MATERIAL_RULES, MATERIAL_TEMPLATE_CATALOG)
+        id(rule): variable_name
+        for rule, (variable_name, _) in zip(MATERIAL_RULES, MATERIAL_MATCH_TEMPLATES)
     }
 
     DETAIL_HOLD_OCR = RuleOcr(

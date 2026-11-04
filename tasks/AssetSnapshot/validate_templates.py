@@ -165,7 +165,12 @@ if top_files - expected_top_files:
 
 mat_files = set(os.listdir(MATERIAL_DIR))
 expected_mat_files = {f"{item['display_name']}.png" for item in catalog if item['kind'] == 'material'}
-documented_variants = {'典藏礼券_选中.png'}
+documented_variants = {Path(path).name for item in catalog for path in item.get('variants', [])}
+for name in documented_variants:
+    for directory, expected_size in [(MATERIAL_DIR, (95, 70)), (FULL_CELLS_MAT_DIR, (95, 95))]:
+        variant = imread_u(str(directory / name))
+        if variant is None or (variant.shape[1], variant.shape[0]) != expected_size:
+            errors.append(f'Variant {directory / name} missing or invalid size, expected {expected_size}')
 if mat_files - expected_mat_files - documented_variants:
     errors.append(f'Extra files in material: {mat_files - expected_mat_files - documented_variants}')
 

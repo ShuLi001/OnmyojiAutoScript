@@ -12,7 +12,7 @@ from typing import Mapping
 
 import numpy as np
 
-from module.atom.ocr import RuleOcr
+from tasks.AssetSnapshot.quantity_ocr import InventoryQuantityOcr as RuleOcr
 from module.exception import ScriptError, TaskEnd
 from module.image.rpc import get_image_client
 from module.logger import logger
@@ -396,6 +396,10 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             keyword="",
             name=f"asset_snapshot_quantity_{roi[0]}_{roi[1]}",
         )
+        # Filtering also retains this card's white lettering and selected border.
+        # Its existing tight crop reads both selection states correctly without filtering.
+        if variable_name == "myriad_soul":
+            rule.filter_white = False
         # Keep the detector's number box: whole-line OCR also reads artwork lettering.
         boxes = rule.detect_and_ocr(self.device.image)
         raw = boxes[0].ocr_text if boxes else None

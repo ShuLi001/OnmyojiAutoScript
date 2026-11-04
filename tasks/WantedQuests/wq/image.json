@@ -155,7 +155,7 @@
   {
     "itemName": "trace_enable_new",
     "imageName": "wq_trace_enable_new.png",
-    "roiFront": "1128,576,136,130",
+    "roiFront": "1146,596,100,98",
     "roiBack": "1105,552,171,168",
     "method": "Template matching",
     "threshold": 0.82,
@@ -164,7 +164,7 @@
   {
     "itemName": "trace_disable_new",
     "imageName": "wq_trace_disable_new.png",
-    "roiFront": "1128,576,136,130",
+    "roiFront": "1146,596,100,98",
     "roiBack": "1105,552,171,168",
     "method": "Template matching",
     "threshold": 0.82,
