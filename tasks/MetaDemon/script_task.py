@@ -4,21 +4,25 @@
 import time
 
 import random
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from module.atom.image import RuleImage
+from module.atom.ocr import RuleOcr
 
 from tasks.Component.GeneralBattle.general_battle import GeneralBattle
 from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
 from tasks.GameUi.game_ui import GameUi
+from tasks.GameUi.page import page_kekkai_toppa, page_realm_raid
 from tasks.MetaDemon.config import MetaDemon, BossType
 from tasks.MetaDemon.assets import MetaDemonAssets
+from tasks.MetaDemon.ticket_farm import TicketFarmMixin
 import tasks.MetaDemon.page as ipages
 
 from module.logger import logger
 from module.exception import TaskEnd
 
 
-class ScriptTask(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
+class ScriptTask(TicketFarmMixin, GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
     """超鬼王"""
 
     class State:
@@ -43,6 +47,10 @@ class ScriptTask(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
         return self.cur_boss_type is not None and self.cur_boss_type in powerful_list
 
     def before_run(self):
+        self.State = type(self).State()
+        self.cur_boss_type = None
+        self.total_count = 0
+        self.current_count = 0
         self.navigator.add_unknown_closer(self.I_MD_GET_YESTERDAY_REWARD)
         self.conf = self.config.meta_demon
         self.limit_time = self.conf.meta_demon_config.limit_time_v
@@ -66,9 +74,21 @@ class ScriptTask(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
             key="page_meta_demon_boss->page_shikigami_records",
         )
         page_main.remove_transition(key="page_main->page_shikigami_records")
+        # 式神录的返回按钮只会回到进入它的页面，不能借结界突破抄近路进入活动。
+        for definition in (page_realm_raid, page_kekkai_toppa):
+            page = self.navigator.resolve_page(definition)
+            if page is not None:
+                page.remove_transition(destination=page_shikigami_records)
 
     def run(self):
         self.before_run()
+        if not self.run_ticket_farm():
+            retry_interval = max(self.conf.scheduler.wait_interval, timedelta(seconds=1))
+            self.set_next_run('MetaDemon', server=False, target=datetime.now() + retry_interval)
+            self.finish_task()
+            return
+        # 鬼王战斗的时长单独计算，不包含刷票耗时。
+        self.start_time = datetime.now()
         self.goto_page(ipages.page_meta_demon_boss)
         while True:
             self.update_global_state()
@@ -83,7 +103,7 @@ class ScriptTask(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
                     if self.check_and_prepare_battle():
                         self.start_battle()
                 case ipages.page_battle:
-                    self.battle_wait(self.conf.general_battle.random_click_swipt_enable)
+                    self.battle_wait(False)
                 case ipages.page_reward | ipages.page_battle_result:
                     self.click(ipages.random_click(), interval=0.6)
                 case _:
@@ -110,7 +130,8 @@ class ScriptTask(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
                 self.ui_click_until_disappear(self.I_MD_CLOSE_POPUP, interval=0.6)
                 self.set_next_run('MetaDemon', target=datetime.now() + self.conf.scheduler.wait_interval)
                 self.finish_task()
-            if self.appear_then_click(self.I_MD_FIRE, interval=0.8):
+            if self.appear(self.I_MD_FIRE, interval=0.8):
+                self.click(self.C_MD_FIRE)
                 continue
 
     def battle_wait(self, random_click_swipt_enable: bool) -> bool:
@@ -175,39 +196,68 @@ class ScriptTask(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
         synthesis_list = self.conf.meta_demon_config.synthesis_list_v
         self.ui_click(self.I_MD_SYNTHESIS, self.I_MD_START_SYNTHESIS, interval=0.6)
         for boss_type in synthesis_list:
-            self.do_synthesis(type_ticket_dict[boss_type][0], type_ticket_dict[boss_type][1])
+            self.do_synthesis(type_ticket_dict[boss_type][0], type_ticket_dict[boss_type][1], boss_type)
         self.ui_click(self.I_MD_CLOSE_POPUP, self.I_MD_SHIKIGAMI, interval=0.6)  # 关闭弹窗退回到鬼王界面
 
-    def do_synthesis(self, target_boss_ticket: RuleImage, need_ticket: int):
+    def _read_synthesis_row(self, boss_type: BossType) -> tuple[str, int | None]:
+        """读取目标行的真实星级文字和已放入数量，不以行模板存在代替选中校验。"""
+        offset = (boss_type.value - 1) * 100
+        title_roi = (304, 154 + offset, 164, 34)
+        count_roi = (306, 214 + offset, 155, 29)
+        title_rule = RuleOcr(name='md_synthesis_row_title', mode='Single', method='Default',
+                             roi=title_roi, area=title_roi, keyword='')
+        count_rule = RuleOcr(name='md_synthesis_row_added', mode='Single', method='Default',
+                             roi=count_roi, area=count_roi, keyword='')
+        title = re.sub(r'\s+', '', title_rule.ocr_single(self.device.image))
+        added = re.sub(r'\s+', '', count_rule.ocr_single(self.device.image))
+        match = re.fullmatch(r'已放入[:：]?(\d+)', added)
+        return title, int(match.group(1)) if match else None
+
+    def do_synthesis(self, target_boss_ticket: RuleImage, need_ticket: int, boss_type: BossType):
         """开始合成鬼王
         :param target_boss_ticket: 目标鬼王级别门票
         :param need_ticket: 合成当前级别鬼王需要的门票数量
+        :param boss_type: 配置要求合成的星级，用于核对行文字和已放入数量
         """
-        if not self.appear(target_boss_ticket):
-            logger.info(f'{target_boss_ticket} not recognized, skip synthesis')
-            return
-        click_cnt, max_cnt = 0, random.randint(2, 3)
+        expected_title = ('一', '二', '三', '四', '五')[boss_type.value - 1] + '星裂变之眼'
+        reward_deadline = None
         while True:
             self.screenshot()
-            if click_cnt >= max_cnt:  # 兜底,多次点击开始合成都没有出现获得奖励则退出
-                break
             if self.appear(self.I_MD_SYNTHESIS_NEED_MONEY, interval=0.8):  # 出现花钱购买合成券
                 self.ui_click(self.I_MD_CLOSE_POPUP, self.I_MD_START_SYNTHESIS, interval=0.6)  # 关闭购买弹窗
                 break
             if self.appear(self.I_UI_REWARD, interval=0.8):  # 出现获得奖励说明合成成功
+                logger.info(f'合成结果已确认: {expected_title}')
                 self.click(ipages.random_click(), interval=0.6)
-                click_cnt = 0  # 清空点击标志
+                reward_deadline = None
                 continue
-            if self.appear(self.I_MD_SYNTHESIS_EMPTY, interval=0.8):  # 有空位
-                empty_list = self.I_MD_SYNTHESIS_EMPTY.match_all(self.device.image, frame_id=self.device.image_frame_id)
-                if len(empty_list) < need_ticket:  # 空位数量小于需要的门票数量->门票不够则退出
-                    logger.info(f'{target_boss_ticket} ticket not enough, skip synthesis')
+            if reward_deadline is not None:
+                if time.monotonic() >= reward_deadline:
+                    logger.warning(f'未确认合成结果，停止重复点击: {expected_title}')
                     break
-            if self.appear_then_click(target_boss_ticket, interval=2):  # 点击对应级别鬼王门票
-                if self.appear_then_click(self.I_MD_START_SYNTHESIS, interval=2.5):  # 点击开始合成
-                    click_cnt += 1
+                time.sleep(0.2)
                 continue
-        logger.info(f'{target_boss_ticket} synthesis done')
+            if not self.appear(target_boss_ticket):
+                logger.warning(f'合成目标条目未识别，跳过: {expected_title}')
+                break
+            actual_title, added = self._read_synthesis_row(boss_type)
+            if actual_title != expected_title:
+                logger.warning(f'合成星级校验失败: 期望 {expected_title}, 实际 {actual_title!r}，跳过')
+                break
+            if added is None:
+                if not self.appear_then_click(target_boss_ticket, interval=2):
+                    break
+                # 选择行后必须读新画面，禁止用选择前的截图直接点击合成。
+                self.screenshot()
+                actual_title, added = self._read_synthesis_row(boss_type)
+            logger.info(f'合成材料检查: 期望 {expected_title}, 实际 {actual_title!r}, 已放入 {added}/{need_ticket}')
+            if actual_title != expected_title or added != need_ticket:
+                logger.warning('合成材料星级或数量未确认，跳过本次合成')
+                break
+            if not self.appear_then_click(self.I_MD_START_SYNTHESIS, interval=2.5):
+                break
+            reward_deadline = time.monotonic() + 15
+        logger.info(f'合成处理结束: {expected_title}')
 
     def check_fatigue(self):
         logger.hr('Check fatigue')
@@ -232,7 +282,8 @@ class ScriptTask(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
                 self.State.done = True
                 logger.info('Not have any boss ticket, exit')
                 return False
-            if self.appear_then_click(self.I_MD_SWITCH_TICKET, interval=0.6):
+            if self.appear(self.I_MD_SWITCH_TICKET, interval=0.6):
+                self.click(self.C_MD_SWITCH_TICKET)
                 continue
         type_ticket_dict: dict[BossType, RuleImage] = {
             BossType.ONE_STAR: self.I_MD_ONE_STAR,
@@ -301,6 +352,8 @@ class ScriptTask(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
 
     def check_and_switch_soul(self) -> bool:
         """切换御魂"""
+        if not self.conf.switch_soul.enable:
+            return True
         if self.State.switch_soul_done:
             return True
         logger.hr('Switch soul')
@@ -324,9 +377,9 @@ class ScriptTask(GeneralBattle, SwitchSoul, GameUi, MetaDemonAssets):
             return False
         switch_type, (group, team) = self.conf.switch_soul.get_switch_by_enum(self.cur_boss_type)
         if switch_type is None:
-            logger.error(f'Switch soul format is invalid on {self.cur_boss_type.name.lower()}')
+            logger.info(f'No soul preset configured for {self.cur_boss_type.name.lower()}, skip')
             self.goto_page(ipages.page_meta_demon_boss)
-            return False
+            return True
         if switch_type == 'int':
             self.run_switch_soul((group, team))
         if switch_type == 'str':

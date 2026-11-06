@@ -1038,6 +1038,11 @@
       "float_time": "00:00:00",
       "wait_interval": "00 01:40:00"
     },
+    "ticket_farm": {
+      "enable": false,
+      "battle_task": "EvoZone",
+      "limit_time": "00:30:00"
+    },
     "meta_demon_config": {
       "limit_time": "00:45:00",
       "limit_count": 50,

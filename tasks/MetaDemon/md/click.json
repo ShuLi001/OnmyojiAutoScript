@@ -1,0 +1,26 @@
+[
+  {
+    "itemName": "md_enter_boss",
+    "roiFront": "886,28,150,238",
+    "roiBack": "886,28,150,238",
+    "description": "点击活动首页祸王降临入口进入超鬼王"
+  },
+  {
+    "itemName": "md_switch_ticket",
+    "roiFront": "1114,502,130,30",
+    "roiBack": "1114,502,130,30",
+    "description": "点击全部队列按钮内部"
+  },
+  {
+    "itemName": "md_summon_boss",
+    "roiFront": "1150,590,64,66",
+    "roiBack": "1150,590,64,66",
+    "description": "点击召唤鬼王菱形按钮内部"
+  },
+  {
+    "itemName": "md_fire",
+    "roiFront": "1124,578,116,86",
+    "roiBack": "1124,578,116,86",
+    "description": "点击挑战鬼王按钮，范围与识别搜索区域一致"
+  }
+]

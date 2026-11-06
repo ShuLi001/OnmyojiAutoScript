@@ -6,7 +6,7 @@ from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleCon
 
 from tasks.Component.config_base import ConfigBase, TimeDelta, Time, dynamic_hide
 from pydantic import Field
-from enum import IntEnum
+from enum import Enum, IntEnum
 from tasks.Component.config_scheduler import Scheduler
 
 
@@ -109,6 +109,18 @@ class MetaDemonSwitchSoulConfig(ConfigBase):
         return GeneralBattleConfig()
 
 
+class TicketFarmSource(str, Enum):
+    EVO_ZONE = 'EvoZone'
+    OROCHI = 'Orochi'
+    EXPLORATION = 'Exploration'
+
+
+class MetaDemonTicketFarmConfig(ConfigBase):
+    enable: bool = Field(default=False, description='先刷门票，开始时从探索页读取进度，战斗中从奖励页读取；达到每日上限后攻打超鬼王，识别失败时暂停本轮')
+    battle_task: TicketFarmSource = Field(default=TicketFarmSource.EVO_ZONE, description='直接复用所选任务的层数、阵容、组队等配置，在奖励页关闭前读取当日门票数量')
+    limit_time: Time = Field(default=Time(minute=30), description='本轮刷门票的最长时间；未到每日上限则等待后重试，不进入超鬼王战斗')
+
+
 class MetaDemonScheduler(Scheduler):
     wait_interval: TimeDelta = Field(default=TimeDelta(hours=1, minutes=40), description='疲劳度满时等多长时间后再次运行本任务,建议设置等待完全恢复疲劳度所需的时间\n例:100分钟恢复100点疲劳度,再次运行必定可以继续战斗')
 
@@ -117,5 +129,6 @@ class MetaDemonScheduler(Scheduler):
 
 class MetaDemon(ConfigBase):
     scheduler: MetaDemonScheduler = Field(default_factory=MetaDemonScheduler)
+    ticket_farm: MetaDemonTicketFarmConfig = Field(default_factory=MetaDemonTicketFarmConfig)
     meta_demon_config: MetaDemonConfig = Field(default_factory=MetaDemonConfig)
     switch_soul: MetaDemonSwitchSoulConfig = Field(default_factory=MetaDemonSwitchSoulConfig)
