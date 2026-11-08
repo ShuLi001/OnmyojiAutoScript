@@ -12,10 +12,11 @@ from typing import Mapping
 
 import numpy as np
 
-from tasks.AssetSnapshot.quantity_ocr import InventoryQuantityOcr as RuleOcr
+from module.config.utils import configured_device_id
 from module.exception import ScriptError, TaskEnd
 from module.image.rpc import get_image_client
 from module.logger import logger
+from tasks.AssetSnapshot.quantity_ocr import InventoryQuantityOcr as RuleOcr
 from tasks.GameUi.game_ui import GameUi
 
 from tasks.AssetSnapshot.asset_snapshot import (
@@ -70,7 +71,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
     def _snapshot_store(self) -> SnapshotStore:
         return SnapshotStore(
             Path("config/asset_snapshot"), self.config.config_name,
-            str(self.config.script.device.serial),
+            configured_device_id(self.config),
             str(self.config.restart.login_character_config.character),
             self.VARIABLE_MAPPING,
             generation=getattr(self._settings(), "history_generation", 0),
@@ -228,6 +229,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                         roi=roi, area=roi, mode="Single", method="Default",
                         keyword="", name=f"asset_snapshot_{variable_name}_retry_{attempt}",
                     )
+                    current_rule.filter_white = False
                 else:
                     current_rule = rule
                 raw = current_rule.ocr(self.device.image)

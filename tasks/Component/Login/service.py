@@ -9,6 +9,8 @@ from tasks.GameUi.chess_battle import ChessBattleNavigationMixin
 from tasks.Restart.assets import RestartAssets
 from tasks.base_task import BaseTask
 
+DESKTOP_MPAY_CLOSE_LIMIT = 5
+
 
 class LoginService(
     ChessBattleNavigationMixin,
@@ -36,13 +38,30 @@ class LoginService(
         skip_login_animation = True
         skip_click_mx_cnt = 5
         login_success = False
+        popup_count = 0
+
+        def handle_desktop_login_popup() -> bool:
+            nonlocal popup_count
+            if not self.device.is_desktop or not self.device.find_desktop_login_popup():
+                return False
+            popup_count += 1
+            if popup_count > DESKTOP_MPAY_CLOSE_LIMIT:
+                raise GameStuckError('Desktop MPay login popup keeps reappearing')
+            if (not self.device.desktop_confirm_login_popup()
+                    and self.device.find_desktop_login_popup()):
+                raise GameStuckError('Desktop MPay login popup cannot be closed')
+            return True
 
         while 1:
+            if handle_desktop_login_popup():
+                continue
             if not login_success and orientation_timer.reached():
                 self.device.get_orientation()
                 orientation_timer.reset()
 
             self.screenshot()
+            if handle_desktop_login_popup():
+                continue
             if self.appear_then_click(
                 self.I_RETURN_CHESS_CANCEL,
                 interval=0.8,
@@ -86,6 +105,7 @@ class LoginService(
             if self.appear(self.I_MAIN_GOTO_SHIKIGAMI_RECORDS, interval=0.2):
                 if confirm_timer.reached():
                     logger.info('Login to main confirm (shikigami records button appears)')
+                    login_success = True
                     break
             else:
                 confirm_timer.reset()
@@ -170,9 +190,15 @@ class LoginService(
         self.device.stuck_record_clear()
         self.device.click_record_clear()
         try:
-            self._app_handle_login()
+            logged_in = self._app_handle_login()
+            if self.device.is_desktop:
+                if not logged_in:
+                    raise GameStuckError('Desktop client did not reach a logged-in page')
+                self.device.desktop_mark_logged_in()
             return True
         except (GameTooManyClickError, GameStuckError) as e:
+            if self.device.is_desktop:
+                raise  # Restart 清理失败的客户端并决定是否重试。
             logger.warning(e)
             self.device.app_stop()
             self.device.app_start()

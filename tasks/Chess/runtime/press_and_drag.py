@@ -35,7 +35,10 @@ def Press_and_Drag(
     start = time.perf_counter()
     device._invalidate_image_batch_cache()
 
-    if method == 'minitouch':
+    if getattr(device, 'is_desktop', False):
+        p1, p2 = _randomized_points(p1, p2, point_random)
+        device.swipe_desktop_window_message(p1, p2, hold_duration=hold_duration)
+    elif method == 'minitouch':
         _press_and_drag_minitouch(
             device,
             p1,

@@ -62,7 +62,7 @@ class ScriptTask(GameUi, GuildActivityMonitorAssets):
         """启动活动监控循环"""
         monitor_config = self.config.guild_activity_monitor.guild_activity_monitor_combat_time
         interval = monitor_config.detection_interval
-        use_ocr = monitor_config.use_ocr
+        use_ocr = self.device.is_desktop or monitor_config.use_ocr
         keywords = list(keyword_map.keys())
         logger.info(f"开始阴阳寮活动监控，持续{monitor_config.monitor_duration}分钟，"
                     f"每{interval}秒检测一次，模式: {'ocr' if use_ocr else 'adb'}")

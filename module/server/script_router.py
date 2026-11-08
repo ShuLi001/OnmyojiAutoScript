@@ -382,7 +382,22 @@ async def script_task(script_name: str, task: str, group: str, argument: str, ty
     except Exception as e:
         # 类型不正确
         raise HTTPException(status_code=400, detail=f'Argument type error: {e}')
-    return mm.config_cache(script_name).model.script_set_arg(task, group, argument, value)
+    model = mm.config_cache(script_name).model
+    if task.lower() == 'script' and group == 'desktop' and argument == 'launch_instance' and value is True:
+        from filelock import Timeout
+        from module.config.utils import configured_device_id
+        from tasks.AssetSnapshot.capture import device_lock
+
+        def launch():
+            try:
+                with device_lock(configured_device_id(model)).acquire(timeout=0):
+                    return model.script_set_arg(task, group, argument, value)
+            except Timeout:
+                logger.warning(f'[{script_name}] 设备正在被脚本使用，跳过手动启动')
+                return False
+
+        return await run_in_threadpool(launch)
+    return model.script_set_arg(task, group, argument, value)
 
 
 @script_app.put('/{script_name}/{task}/sync_next_run')

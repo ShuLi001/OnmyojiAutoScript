@@ -1,3 +1,18 @@
 {
-
+  "desktop": "Desktop client",
+  "desktop_enable_help": "Control the Windows Onmyoji client. Save and restart the script to apply.",
+  "game_path": "Game installation directory",
+  "game_path_help": "Enter the directory containing bin/onmyoji.exe, or leave blank to search automatically.",
+  "profile_dir": "Profile directory",
+  "profile_dir_help": "Use a separate directory per instance to keep account data separate. Leave blank to use the default account data.",
+  "window_pos": "Window position",
+  "window_pos_help": "Enter x,y (for example, 0,0), or leave blank to keep the current position.",
+  "window_title": "Window title",
+  "window_title_help": "Give this instance a distinct taskbar title, or leave blank to keep the game's title.",
+  "launch_instance": "Launch game client",
+  "launch_instance_help": "Enable desktop mode and save your settings before launching the game.",
+  "desktop_launch_success": "Desktop client is ready",
+  "desktop_launch_failed": "Could not launch the desktop client. Check the OAS backend log.",
+  "restart_when_window_exists": "Force restart if a window is open",
+  "restart_when_window_exists_help": "Allow the Restart task to close and relaunch an existing desktop client."
 }

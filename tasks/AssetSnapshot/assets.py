@@ -7,7 +7,6 @@ from module.atom.click import RuleClick
 from module.atom.image import RuleImage
 from module.atom.ocr import RuleOcr
 from module.atom.swipe import RuleSwipe
-from tasks.AssetSnapshot.quantity_ocr import InventoryQuantityOcr
 
 from tasks.AssetSnapshot.asset_snapshot import (
     MATERIAL_GRID_ROI,
@@ -116,7 +115,7 @@ class AssetSnapshotAssets:
     }
 
     TOP_RESOURCE_OCR = {
-        variable_name: InventoryQuantityOcr(
+        variable_name: RuleOcr(
             roi=roi,
             area=roi,
             mode="Single",

@@ -17,6 +17,8 @@ from win32con import (SRCCOPY, DESKTOPHORZRES, DESKTOPVERTRES, WM_LBUTTONUP,
                       WM_LBUTTONDOWN, WM_ACTIVATE, WA_ACTIVE, MK_LBUTTON,
                       WM_NCHITTEST, WM_SETCURSOR, HTCLIENT, WM_MOUSEMOVE)
 from module.config.config import Config
+from module.config.utils import desktop_mode_enabled
+from module.device.method.desktop_impl import DesktopWindow, _desktop_process_started
 from module.logger import logger
 
 
@@ -126,7 +128,7 @@ class EmulatorFamily(Enum):
 """""
 # **********************************************************************************************************************
 
-class Handle:
+class Handle(DesktopWindow):
     emulator_list = ['MuMu12',
                      'MuMu',
                      '雷电',
@@ -156,6 +158,8 @@ class Handle:
         'bluestacks_family': ['root_handle_title']
     }
     config: Config = None
+    is_desktop_window: bool = False
+    """是否为桌面客户端模式（script.desktop.enable），桌面分支统一用此标志隔离"""
 
     def __init__(self, config) -> None:
         """
@@ -168,6 +172,16 @@ class Handle:
                 self.config = Config(config, task=None)
             else:
                 self.config = config
+        if desktop_mode_enabled(self.config):
+            self.is_desktop_window = True
+            pid, hwnd = self._desktop_locate_window()
+            self.root_handle_title = ''
+            self.root_handle_num = 0
+            self.root_handle = str(pid) if pid else ''
+            self._desktop_started = _desktop_process_started(pid) if pid else None
+            if hwnd:
+                self.desktop_bind_pid(pid, hwnd, just_launched=False)
+            return
         if not self.config.script.device.handle:
             logger.info('Handle is empty. oas not use handle')
             return
@@ -340,6 +354,8 @@ class Handle:
         截屏的句柄其实并不是根句柄
         :return:  出错返回None
         """
+        if getattr(self, 'is_desktop_window', False):
+            return self.root_handle_num
         if self.emulator_family == EmulatorFamily.FAMILY_MUMU:
             # 使用正则匹配12 来判定是不是mumu12这并不是一个好的方法
             name = self.root_node.children[0].name
@@ -383,6 +399,9 @@ class Handle:
         2023.7.1 在高缩放的设备上应该输出1280X720
         :return:
         """
+        if getattr(self, 'is_desktop_window', False):
+            # 桌面模式固定输出 1280x720（物理目标，与资产 1:1），位图由截图方法缩放得到
+            return 1280, 720
         winRect = GetWindowRect(self.screenshot_handle_num)
         scale_rate = window_scale_rate()
         width_before: int = winRect[2] - winRect[0]  # 右x-左x

@@ -4,18 +4,21 @@
 设计目标
 --------
 1. 只在日志输出到前端之前做文本翻译, 服务端控制台与 ``./log`` 文件里的英文日志完全不变。
-2. 不改动任何变量名、函数名、类名、配置键、文件路径、数字、URL、异常名、OCR 结果等。
+2. 仅在明确的日志字段中替换已知显示名；保留文件路径、数字、URL、异常名和 OCR 原文。
 3. 纯规则、无网络依赖: 整句模板优先, 未命中时按词/短语最长匹配做降级翻译。
 
 对外接口
 --------
 - ``translate_message(message)``: 翻译一条日志的正文部分（不含时间戳/源码/级别头）。
 - ``translate_log_text(text)``: 翻译整段日志文本, 逐行识别文件格式或 Flutter 管道格式,
-  只翻译正文, 识别不出头部的行（如 traceback、分隔线）原样保留。
+  翻译正文和任务标题，其他无行头的内容（如 traceback）原样保留。
 """
 from __future__ import annotations
 
+import json
 import re
+from functools import lru_cache
+from pathlib import Path
 
 # ======================================================================================================================
 # 整句模板
@@ -30,6 +33,7 @@ SENTENCES: dict[str, str] = {
     "oas web service shutdown done": "OAS Web 服务已关闭",
     "log cleanup finished": "历史日志清理完成",
     "internal server error:": "内部服务器错误：",
+    "this is likely to be a mistake of developers, but sometimes just random issues": "这可能是程序问题，也可能是偶发异常",
     "script {} is not running": "脚本 {} 未运行",
     "script {} is already running": "脚本 {} 已在运行",
     "script {} is already running and first stop it": "脚本 {} 正在运行，请先停止",
@@ -161,8 +165,6 @@ SENTENCES: dict[str, str] = {
     "unexpected screenshot: {}": "异常截图：{}",
     "screenshot interval set to {}s": "截图间隔已设为 {} 秒",
     "history click: {}": "历史点击：{}",
-    "{}click {} @ {}": "点击 {} @ {}",
-    "{}click {} @ {} {}": "点击 {} @ {} {}",
     "execute: {}": "执行命令：{}",
     "wait too long": "等待超时",
     "waiting for {}": "等待 {}",
@@ -358,18 +360,15 @@ SENTENCES: dict[str, str] = {
     "click fire {} success": "点击挑战 {} 成功",
     "click fire again success": "再次点击挑战成功",
     # ---- 依据 2026-09-20 实际运行日志(oas1)补充 ----
-    "[{}] click ({}, {}) @ {}": "[{1}]点击({2}, {3}) @ {4}",
-    "<<< ui goto {} >>>": "<<< 界面跳转 {1} >>>",
     "<<< detect device >>>": "<<< 检测设备 >>>",
     "<<< start wanted quests >>>": "<<< 开始悬赏任务 >>>",
+    "<<< start activation >>>": "<<< 开始挂卡流程 >>>",
     "<<< feed >>>": "<<< 投喂 >>>",
     "<<< buy black daruma scrap >>>": "<<< 购买黑达摩碎片 >>>",
     "device": "设备",
     "start boss battle": "开始Boss战斗",
     "scheduler: start task `{}`": "调度器：启动任务 `{1}`",
     "scheduler: end task `{}`": "调度器：结束任务 `{1}`",
-    "page arrived {}": "已到达页面 {1}",
-    "current page: {}. following path:": "当前页面：{1}，后续路径：",
     "try switch to a supported page": "尝试切换到受支持的页面",
     "arm battle stuck guard": "启用战斗卡死防护",
     "exit matcher hit": "退出条件已命中",
@@ -403,6 +402,10 @@ SENTENCES: dict[str, str] = {
     "sort by level": "按等级排序",
     "no discardable soul found, exit": "未找到可弃置御魂，退出",
     "no utilize harvest": "无寄养收获",
+    "card is using": "结界卡使用中",
+    "card is selected but not using": "已选中结界卡，尚未激活",
+    "card is activated": "结界卡已激活",
+    "card is not selected also not using": "尚未选择结界卡",
     "finding normal boss...": "正在寻找普通Boss…",
     "trying to enter boss...": "正在尝试进入Boss…",
     "boss battle confirm and enter": "确认并进入Boss战斗",
@@ -1331,6 +1334,187 @@ def _normalize_spacing(text: str) -> str:
     return _CJK_ADJACENT_SPACE_RE.sub("", text)
 
 
+_REALM_OCR_NAMES = {
+    "r_friend_realm": "好友结界标题",
+    "r_friend_realm_named": "好友结界标题（含昵称）",
+    "r_shikigami": "式神育成入口",
+    "r_realm": "结界卡入口",
+    "utilize_res_time": "寄养剩余时间",
+    "box_exp": "经验酒壶进度",
+    "card_all_time": "结界卡剩余时间",
+}
+
+# 未收录的动作标签保留原名。
+_CLICK_ACTION_NAMES = {
+    "wq_wq_seal": "悬赏封印入口",
+    "wq_wq_done": "已完成悬赏",
+    "wq_trace_enable": "一键追踪",
+    "wq_trace_enable_new": "一键追踪",
+    "wq_trace_disable": "取消追踪",
+    "wq_trace_disable_new": "取消追踪",
+    "wq_trace_one_disable": "追踪当前悬赏",
+    "wq_trace_one_close": "关闭追踪设置",
+    "wq_go_explore_new": "前往探索",
+    "wq_text_all": "打开悬赏详情",
+    "wq_goto_new": "前往挑战",
+    "wq_close_new": "关闭悬赏详情",
+    "wq_wq_box": "领取悬赏奖励",
+    "chanllenge_wqc_fire": "开始挑战",
+    "chanllenge_wqc_unlock": "锁定阵容",
+    "wq_wqse_fire": "开始秘闻挑战",
+    "secret_chat": "秘闻对话",
+    "special_main": "庭院悬赏入口",
+    "wq_invite_ensure": "确认邀请",
+    "wq_invite_cancel": "取消邀请",
+    "wq_invite_same_svr": "同服好友",
+    "wq_invite_diff_svr": "跨服好友",
+    "wq_invite_column_1": "选择左列好友",
+    "wq_invite_column_2": "选择右列好友",
+    **{f"invite_wq_invite_{i}": f"协作邀请{i}" for i in range(1, 4)},
+    **{f"invite_wq_invite_{i}_purple": f"协作邀请{i}（紫色）" for i in range(1, 4)},
+    **{f"invite_wq_friend_{i}": f"选择好友{i}" for i in range(1, 6)},
+    "safe_random_click": "安全区域",
+    "ui_ui_back_red": "返回",
+    "ui_ui_back_yellow": "返回",
+    "ui_ui_back_blue": "返回",
+    "ui_reward": "关闭奖励弹窗",
+    "ui_ui_reward": "关闭奖励弹窗",
+    "page_main_goto_guild": "前往阴阳寮",
+    "page_town_goto_main": "返回庭院",
+    "ku_guild_realm": "进入结界",
+    "realm_box_ap": "打开体力食盒",
+    "realm_ap_extract": "领取体力",
+    "realm_box_exp": "打开经验酒壶",
+    "realm_box_exp_max": "打开经验酒壶",
+    "realm_exp_extract": "领取酒壶经验",
+    "a_a_harvest_exp": "领取育成经验",
+    "gb_preset": "打开预设阵容",
+    "gb_preset_ensure": "确认预设阵容",
+    "gb_prepare_highlight": "准备",
+    "gg_g_ignore": "忽略",
+    "login_enter_game": "进入游戏",
+    "login_animation_center": "跳过登录动画",
+    "login_scroll_close_area": "关闭登录公告",
+    "click": "普通点击",
+    "longclick": "长按",
+    "hyakkiyakou": "百鬼夜行",
+    "scrollfocus": "聚焦滚动区域",
+    "i_claim": "领取奖励",
+}
+_CLICK_MESSAGE_RE = re.compile(
+    r"^(?P<duration>\[\d+(?:\.\d+)?s\])?\s*Click\s+"
+    r"\(\s*(?P<x>-?\d+)\s*,\s*(?P<y>-?\d+)\s*\)\s+@\s+(?P<action>\S.*?)\s*$"
+)
+_PRESET_CLICK_RE = re.compile(r"preset_(group|team)_(\d+)")
+
+
+def _translate_click_action(action: str) -> str:
+    name, separator, detail = action.partition(" ")
+    key = name.lower()
+    translated = _CLICK_ACTION_NAMES.get(key) or _REALM_OCR_NAMES.get(key) or PAGE_DISPLAY_NAMES.get(key)
+    if translated is None and (preset := _PRESET_CLICK_RE.fullmatch(key)):
+        kind, number = preset.groups()
+        translated = f"预设{'分组' if kind == 'group' else '队伍'}{number}"
+    return f"{translated}{separator}{detail}" if translated is not None else action
+
+
+def _task_key(name: str) -> str:
+    return name.replace("_", "").lower()
+
+
+@lru_cache(maxsize=1)
+def _load_display_names() -> tuple[dict[str, str], dict[str, str]]:
+    module_dir = Path(__file__).resolve().parent
+    translations = {}
+    for path in (module_dir / "config" / "i18n" / "zh-CN.json",
+                 module_dir.parent / "assets" / "i18n" / "zh-CN.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(data, dict):
+            translations.update({key: value for key, value in data.items() if isinstance(value, str)})
+    tasks = {_task_key(key): value for key, value in translations.items()
+             if re.fullmatch(r"[A-Z][A-Za-z0-9_]*", key)}
+    return translations, tasks
+
+
+def _task_display_name(name: str) -> str:
+    return _load_display_names()[1].get(_task_key(name), name)
+
+
+_TASK_ID = r"[A-Za-z][A-Za-z0-9_]*"
+_TASK_LIST_RE = re.compile(rf"(Pending|Waiting) tasks:\s*\[('(?:{_TASK_ID})'(?:,\s*'{_TASK_ID}')*)?\]")
+_TASK_EVENT_RE = re.compile(rf"Scheduler: (Start|End) task `({_TASK_ID})`")
+_TASK_STATE_RE = re.compile(rf"\[Task\]\s+({_TASK_ID})\s+\((Enable|Disable),\s*(\d+),\s*(.+)\)")
+_TASK_NEXT_RUN_RE = re.compile(rf"\[({_TASK_ID})\.scheduler\.next_run\]\s+(.+)")
+_TASK_BANNER_RE = re.compile(rf"(─+) ({_TASK_ID}) (─+)(\r?\n)?")
+_COSTUME_RE = re.compile(r"Switch (main costume to|battle theme|shikigami theme) (\w+\.(COSTUME_\w+))")
+_COSTUME_LABELS = {"main costume to": "庭院", "battle theme": "战斗", "shikigami theme": "式神录"}
+_OCR_RESULT_RE = re.compile(r"\[([A-Z][A-Z0-9_]+) (\d+(?:\.\d+)?s)\]\s+(.+)")
+_OCR_MATCH_RE = re.compile(r"OCR \[([^\]]+)\] detected in (.+)")
+_PAGE_GOTO_RE = re.compile(r"<<< UI GOTO (.+) >>>")
+_PAGE_PATH_RE = re.compile(r"Current page: (.+)\. Following path:")
+_PAGE_SWITCH_RE = re.compile(r"Page switch: (.+?) -> (.+)")
+_PAGE_ARRIVED_RE = re.compile(r"(\[\d+(?:\.\d+)?s\] )?Page arrived (.+)")
+
+
+def _translate_display_fields(message: str) -> str | None:
+    """处理有明确字段边界的日志，避免把同名玩家、文件或识别结果当作标签。"""
+    line = message.strip()
+    if matched := _TASK_LIST_RE.fullmatch(line):
+        kind, items = matched.groups()
+        names = [_task_display_name(name) for name in re.findall(_TASK_ID, items or "")]
+        title = "待执行任务" if kind == "Pending" else "等待中的任务"
+        return f"{title}：{'、'.join(names) or '无'}"
+    if matched := _TASK_EVENT_RE.fullmatch(line):
+        event, name = matched.groups()
+        verb = "启动" if event == "Start" else "结束"
+        return f"调度器：{verb}任务 {_task_display_name(name)}"
+    if matched := _TASK_STATE_RE.fullmatch(line):
+        name, state, priority, next_run = matched.groups()
+        state_text = "启用" if state == "Enable" else "停用"
+        return f"[任务] {_task_display_name(name)}（{state_text}，优先级 {priority}，下次运行 {next_run}）"
+    if matched := _TASK_NEXT_RUN_RE.fullmatch(line):
+        name, next_run = matched.groups()
+        return f"[{_task_display_name(name)}] 下次运行：{next_run}"
+    if matched := _COSTUME_RE.fullmatch(line):
+        category, enum_name, key = matched.groups()
+        name = _load_display_names()[0].get(key.lower(), enum_name)
+        return f"切换{_COSTUME_LABELS[category]}皮肤：{name}"
+    if matched := _PAGE_GOTO_RE.fullmatch(line):
+        return f"<<< 界面跳转：{_translate_page_names(matched[1])} >>>"
+    if matched := _PAGE_PATH_RE.fullmatch(line):
+        return f"当前页面：{_translate_page_names(matched[1])}，后续路径："
+    if matched := _PAGE_SWITCH_RE.fullmatch(line):
+        return f"页面切换：{_translate_page_names(matched[1])} → {_translate_page_names(matched[2])}"
+    if matched := _PAGE_ARRIVED_RE.fullmatch(line):
+        duration = (matched[1] or "").rstrip()
+        return f"{duration}已到达页面：{_translate_page_names(matched[2])}"
+    if line.startswith("[UI] "):
+        return f"[当前页面] {_translate_page_names(line[len('[UI] '):])}"
+    if line.startswith("Utilize remaining time: "):
+        return f"寄养剩余时间：{line.removeprefix('Utilize remaining time: ')}"
+    if matched := _OCR_RESULT_RE.fullmatch(line):
+        name, duration, raw = matched.groups()
+        if label := _REALM_OCR_NAMES.get(name.lower()):
+            return f"[{label} {duration}] {raw}"
+    if matched := _OCR_MATCH_RE.fullmatch(line):
+        name, match_result = matched.groups()
+        if (label := _REALM_OCR_NAMES.get(name.lower())) or match_result == "None":
+            if match_result == "None":
+                result = "未找到匹配项"
+            elif match_result.startswith("["):
+                result = f"匹配项索引 {match_result}"
+            else:
+                result = f"匹配区域 {match_result}"
+            return f"OCR [{label or name}]：{result}"
+    if line.startswith("module_path: ") and ", module_name:" in line:
+        path, _, name = line[len("module_path: "):].partition(", module_name:")
+        return f"任务文件：{path}；模块名：{name.lstrip()}"
+    return None
+
+
 def translate_message(message: str) -> str:
     """翻译一条日志正文。
 
@@ -1342,6 +1526,14 @@ def translate_message(message: str) -> str:
     """
     if not message or not re.search(r"[A-Za-z]", message):
         return _translate_page_names(message)
+
+    if click := _CLICK_MESSAGE_RE.fullmatch(message):
+        duration = click["duration"] or ""
+        action = _translate_click_action(click["action"])
+        return f'{duration}点击({click["x"]}, {click["y"]}) @ {action}'
+
+    if translated := _translate_display_fields(message):
+        return translated
 
     masked, values = _protect(message)
     matched = _match_sentence(masked, values)
@@ -1373,7 +1565,7 @@ _FLUTTER_LINE_RE = re.compile(
 
 
 def translate_log_line(line: str) -> str:
-    """翻译单行日志, 自动识别两种行头格式; 不识别的行原样返回。"""
+    """翻译单行日志正文或任务分隔标题；不识别的行原样返回。"""
     matched = _FILE_LINE_RE.match(line)
     if matched:
         message = translate_message(matched.group("msg"))
@@ -1388,6 +1580,10 @@ def translate_log_line(line: str) -> str:
             f"{matched.group('level')} | {matched.group('time')} | "
             f"{message}{matched.group('eol') or ''}"
         )
+    if matched := _TASK_BANNER_RE.fullmatch(line):
+        left, task, right, line_end = matched.groups()
+        if task.isupper() and (name := _task_display_name(task)) != task:
+            return f"{left} {name} {right}{line_end or ''}"
     return line
 
 

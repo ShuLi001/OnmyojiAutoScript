@@ -421,6 +421,16 @@ class ConfigModel(ConfigBase):
             logger.info(f"reset_task_datetime={date_time}")
             self.reset_datetime_for_all_enabled_tasks(date_time)
 
+        # 一次性动作：启动结果返回前端，无需把按钮值写进配置。
+        if (task == 'script' and group == 'desktop' and argument == 'launch_instance'
+                and value is True):
+            from module.device.env import IS_WINDOWS
+            if not IS_WINDOWS:
+                logger.error('桌面客户端只能由 Windows 上的 OAS 启动')
+                return False
+            from module.device.method.desktop_impl import desktop_launch_instance
+            return desktop_launch_instance(self)
+
         # 设置参数
         try:
             setattr(group_object, argument, value)

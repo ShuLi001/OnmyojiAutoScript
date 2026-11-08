@@ -1707,9 +1707,15 @@
     "template_path": "material/小星糖.png",
     "full_cell_path": "full_cells/material/小星糖.png",
     "kind": "material",
-    "status": "fallback",
-    "source_page": null,
-    "source_coordinates": null,
+    "status": "captured",
+    "source_page": 1,
+    "source_file": "qa/raw_pages/2026-11-08_desktop_star_candy/page_1.png",
+    "source_coordinates": [
+      271,
+      460,
+      95,
+      95
+    ],
     "dimensions": [
       95,
       70
@@ -1720,7 +1726,7 @@
       54,
       25
     ],
-    "notes": "金平糖小星糖，游戏内库存为0，采用官方图标资产合成95x95标准卡片"
+    "notes": "截取自桌面端纳物库原图，未选中，截图中持有 2 个"
   },
   {
     "display_name": "彩星糖",
@@ -1728,9 +1734,15 @@
     "template_path": "material/彩星糖.png",
     "full_cell_path": "full_cells/material/彩星糖.png",
     "kind": "material",
-    "status": "fallback",
-    "source_page": null,
-    "source_coordinates": null,
+    "status": "captured",
+    "source_page": 1,
+    "source_file": "qa/raw_pages/2026-11-08_desktop_star_candy/page_1.png",
+    "source_coordinates": [
+      476,
+      358,
+      95,
+      95
+    ],
     "dimensions": [
       95,
       70
@@ -1741,7 +1753,7 @@
       54,
       25
     ],
-    "notes": "金平糖彩星糖，游戏内库存为0，采用官方图标资产合成95x95标准卡片"
+    "notes": "截取自桌面端纳物库原图，未选中，截图中持有 4 个"
   },
   {
     "display_name": "嗔念之卷",

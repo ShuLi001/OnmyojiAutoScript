@@ -3,8 +3,8 @@
   "total_templates": 71,
   "top_resources_count": 4,
   "materials_count": 67,
-  "captured_count": 69,
-  "fallback_count": 2,
+  "captured_count": 71,
+  "fallback_count": 0,
   "quantity_exclusion_spec": {
     "relative_roi": [
       40,
@@ -23,24 +23,7 @@
       "notes": "打开纳物库默认选中的首个格子，带青蓝色高亮框"
     }
   ],
-  "fallback_details": [
-    {
-      "display_name": "小星糖",
-      "variable_name": "small_star_candy",
-      "status": "fallback",
-      "reason": "用户游戏内纳物库该项持有量为0，无实测卡片展示，采用官方图标资产合成标准95x95卡片兜底，不可与其它材料混淆",
-      "full_cell_path": "full_cells/material/小星糖.png",
-      "template_path": "material/小星糖.png"
-    },
-    {
-      "display_name": "彩星糖",
-      "variable_name": "colorful_star_candy",
-      "status": "fallback",
-      "reason": "用户游戏内纳物库该项持有量为0，无实测卡片展示，采用官方图标资产合成标准95x95卡片兜底，不可与大星糖混淆",
-      "full_cell_path": "full_cells/material/彩星糖.png",
-      "template_path": "material/彩星糖.png"
-    }
-  ],
+  "fallback_details": [],
   "screenshot_pages": {
     "total_pages": 6,
     "page_resolution": [
@@ -66,8 +49,8 @@
     "overlap_verification": {
       "page_1_to_page_2": "第3行（痴念之卷等）在Page 1为(271, 493)，在Page 2顶部复现为(271, 231)；百鬼夜行门票等第4行在Page 2核心区(271, 338)完整无遮挡展示",
       "page_2_to_page_3": "第5行（六星青吉鬼等）在Page 2为(271, 439)，在Page 3复现为(271, 184)；四星青吉鬼、觉醒高级材料在Page 3核心区(271, 284/385)完整展示",
-      "page_3_to_page_4": "第7行（风转符_中级等）在Page 3为(271, 486)，在Page 4复现为(271, 233)；业火轮_低级、SSR全集赏体验卡、彩星糖、星星糖在Page 4核心区(271, 331/432)完整展示",
-      "page_4_to_page_5": "彩星糖等在Page 4为(578, 432)，在Page 5顶部复现；SP皮肤券、高级觉醒材料在Page 5核心区(271, 275/377)完整展示",
+      "page_3_to_page_4": "第7行（风转符_中级等）在Page 3为(271, 486)，在Page 4复现为(271, 233)；业火轮_低级、SSR全集赏体验卡、大星糖、星星糖在Page 4核心区(271, 331/432)完整展示",
+      "page_4_to_page_5": "大星糖等在Page 4为(578, 432)，在Page 5顶部复现；SP皮肤券、高级觉醒材料在Page 5核心区(271, 275/377)完整展示",
       "page_5_to_page_6": "高级黑豹爪等在Page 5为(271, 377)，在Page 6顶部复现；中级/低级觉醒材料及红蓝应援券在Page 6核心区(271, 373/474/575)完整展示直到触底"
     },
     "refresh_run_2026_11_03": {
@@ -107,6 +90,11 @@
           "verified_owned": 1
         }
       ]
+    },
+    "desktop_capture_2026_11_08": {
+      "source_file": "qa/raw_pages/2026-11-08_desktop_star_candy/page_1.png",
+      "page_resolution": [1280, 720],
+      "notes": "桌面端客户区原始截图，未经缩放，小星糖和彩星糖均未选中"
     }
   },
   "captured_materials_coordinates": [
@@ -993,6 +981,34 @@
       ],
       "template_path": "top_resources/魂玉.png",
       "full_cell_path": "full_cells/top_resources/魂玉.png"
+    },
+    {
+      "display_name": "小星糖",
+      "variable_name": "small_star_candy",
+      "source_page": 1,
+      "source_file": "qa/raw_pages/2026-11-08_desktop_star_candy/page_1.png",
+      "source_coordinates": [
+        271,
+        460,
+        95,
+        95
+      ],
+      "template_path": "material/小星糖.png",
+      "full_cell_path": "full_cells/material/小星糖.png"
+    },
+    {
+      "display_name": "彩星糖",
+      "variable_name": "colorful_star_candy",
+      "source_page": 1,
+      "source_file": "qa/raw_pages/2026-11-08_desktop_star_candy/page_1.png",
+      "source_coordinates": [
+        476,
+        358,
+        95,
+        95
+      ],
+      "template_path": "material/彩星糖.png",
+      "full_cell_path": "full_cells/material/彩星糖.png"
     },
     {
       "display_name": "鸣契石",

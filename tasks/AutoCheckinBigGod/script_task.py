@@ -48,6 +48,10 @@ _NO_WINDOW = subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
 class ScriptTask(ManualClaimMixin):
 
     def run(self):
+        if self.device.is_desktop:
+            logger.info('大神签到需要 Android 应用，桌面客户端模式跳过此任务')
+            self.set_next_run('AutoCheckinBigGod', success=False, finish=True)
+            raise TaskEnd('AutoCheckinBigGod')
         self.gl_uid = ""
         self.gl_token = ""
         self.gl_deviceid = ""

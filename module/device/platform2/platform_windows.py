@@ -701,6 +701,8 @@ class PlatformWindows(PlatformBase, EmulatorManager):
         return False
 
     def emulator_stop(self):
+        if getattr(self, 'is_desktop', False):
+            return self.desktop_stop_client()
         logger.hr('Emulator stop', level=1)
         logger.info('[emu-stop] lock wait')
         with self.emulator_lifecycle_lock():

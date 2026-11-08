@@ -9,7 +9,8 @@ from adbutils import AdbClient, AdbDevice
 
 from module.base.decorator import cached_property
 from module.config.config import Config
-from module.config.utils import deep_iter
+from module.config.utils import deep_iter, desktop_mode_enabled
+from module.device.env import IS_WINDOWS
 from module.exception import RequestHumanTakeover
 from module.logger import logger
 
@@ -33,6 +34,13 @@ class ConnectionAttr:
             self.config = Config(config, task=None)
         else:
             self.config = config
+
+        if self.is_desktop:
+            if not IS_WINDOWS:
+                raise RequestHumanTakeover('桌面客户端模式要求 OAS 后端运行在 Windows 上')
+            self.serial = ''
+            self.config.DEVICE_OVER_HTTP = False
+            return
 
         # Init adb client
         logger.attr('AdbBinary', self.adb_binary)
@@ -126,6 +134,15 @@ class ConnectionAttr:
     @cached_property
     def is_emulator(self):
         return self.serial.startswith('emulator-') or self.serial.startswith('127.0.0.1:')
+
+    @cached_property
+    def is_desktop(self):
+        """桌面客户端模式：script.desktop.enable 显式开关。
+
+        刻意不兜底：读不到配置时抛 AttributeError 比静默 False 好——后者会把
+        桌面模式当成模拟器模式继续跑，报错指向完全无关的地方。
+        """
+        return desktop_mode_enabled(self.config)
 
     @cached_property
     def is_network_device(self):

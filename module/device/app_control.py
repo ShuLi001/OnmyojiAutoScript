@@ -17,6 +17,8 @@ class AppControl(Adb, Uiautomator2):
 
         这用于区分“应用被切到后台”和“应用已经被真正杀掉”两种情况。
         """
+        if self.is_desktop:
+            return self.desktop_process_alive()
         if not package_name:
             package_name = self.package
 
@@ -31,6 +33,10 @@ class AppControl(Adb, Uiautomator2):
         return bool(result)
 
     def app_is_running(self) -> bool:
+        if self.is_desktop:
+            return (self.desktop_window_exists()
+                    and not self.app_lost_login()
+                    and self._desktop_login_done)
         method = self.config.script.device.control_method
         # if self.is_wsa:
         #     package = self.app_current_wsa()

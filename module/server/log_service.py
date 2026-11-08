@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-from module.log_translator import translate_log_text, translate_message
+from module.log_translator import translate_log_line, translate_log_text, translate_message
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -1405,7 +1405,7 @@ class LogBrowserService:
         if len(lines) > 1:
             return "".join(LogBrowserService._format_client_log_text(line) for line in lines)
         if " | " not in text:
-            return text
+            return translate_log_line(text)
 
         line_end = ""
         line = text

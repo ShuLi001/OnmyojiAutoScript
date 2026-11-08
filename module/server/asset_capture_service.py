@@ -1,6 +1,7 @@
 import asyncio
 from multiprocessing import get_context
 
+from module.config.utils import configured_device_id
 from tasks.AssetSnapshot.capture import CaptureQueue, device_key, store_for, worker
 from tasks.AssetSnapshot.repository import SnapshotRepository
 
@@ -79,7 +80,7 @@ class AssetCaptureService:
                         process = script._process
                         if process and process.is_alive():
                             config = self.manager.config_cache(name)
-                            if device_key(config.script.device.serial) == key:
+                            if device_key(configured_device_id(config)) == key:
                                 active = True
                                 break
                     if not active:

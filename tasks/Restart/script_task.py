@@ -3,11 +3,13 @@
 # github https://github.com/runhey
 from datetime import datetime
 
-from module.exception import RequestHumanTakeover, TaskEnd
+from module.exception import GameNotRunningError, GameStuckError, GameTooManyClickError, RequestHumanTakeover, TaskEnd
 from module.logger import logger
 from tasks.Component.Login.service import LoginService
 from tasks.Restart.server_update import delay_pending_tasks_for_server_update, is_server_update_window
 from tasks.base_task import BaseTask
+
+DESKTOP_RESTART_ATTEMPTS = 3
 
 
 class ScriptTask(BaseTask):
@@ -49,6 +51,9 @@ class ScriptTask(BaseTask):
         self.app_start()
 
     def recover_app(self):
+        if self.device.is_desktop:
+            self._recover_desktop_app()
+            return
         if not self.device.app_is_alive():
             logger.info('Recovery branch: game process not alive and not in foreground -> full restart')
             self.app_restart()
@@ -61,6 +66,23 @@ class ScriptTask(BaseTask):
 
         logger.info('Recovery branch: game process alive but in background -> bring to foreground')
         self.app_start()
+
+    def _recover_desktop_app(self) -> None:
+        if (self.config.script.desktop.restart_when_window_exists
+                and self.device.desktop_window_exists()
+                and not self.device.desktop_window_is_own_launch()
+                and not self.device.desktop_stop_client()):
+            raise RequestHumanTakeover('无法关闭桌面客户端，请手动结束该进程后再试')
+
+        for attempt in range(1, DESKTOP_RESTART_ATTEMPTS + 1):
+            try:
+                self.app_start()
+                return
+            except (GameNotRunningError, GameStuckError, GameTooManyClickError) as error:
+                logger.warning(f'桌面客户端启动或登录失败（{attempt}/{DESKTOP_RESTART_ATTEMPTS}）: {error}')
+                if not self.device.desktop_stop_client():
+                    raise RequestHumanTakeover('无法关闭失败的桌面客户端，请手动结束该进程') from error
+        raise RequestHumanTakeover('桌面客户端多次启动或登录失败，请检查客户端状态')
 
     def finish_recovery(self):
         self.set_next_run(task='Restart', success=True, finish=True, server=True)

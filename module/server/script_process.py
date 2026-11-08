@@ -6,7 +6,7 @@ import multiprocessing
 from asyncio import QueueEmpty, CancelledError, sleep
 from enum import Enum
 
-from module.logger import logger
+from module.logger import is_click_log_message, logger
 from module.log_translator import translate_log_line
 from module.server.config_manager import ConfigManager
 from module.server.script_websocket import ScriptWSManager
@@ -44,7 +44,7 @@ class ScriptProcess(ScriptWSManager):
         if len(parts) != 3:
             return None
         level, timestamp, message = [part.strip() for part in parts]
-        if not level or not timestamp or not message:
+        if not level or not timestamp or not message or is_click_log_message(message):
             return None
         return message
 
@@ -163,9 +163,10 @@ def func(config: str, state_queue: multiprocessing.Queue, log_pipe_in) -> None:
         from script import Script
         script = Script(config_name=config)
         script.state_queue = state_queue
+        from module.config.utils import configured_device_id
         from tasks.AssetSnapshot.capture import device_lock
-        script.capture_lock_serial = str(script.config.script.device.serial)
-        with device_lock(script.config.script.device.serial):
+        script.capture_lock_serial = configured_device_id(script.config)
+        with device_lock(script.capture_lock_serial):
             script.loop()
     except SystemExit as e:
         logger.info(f'Script {config} process exit')

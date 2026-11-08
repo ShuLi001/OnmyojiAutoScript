@@ -22,7 +22,7 @@ from cached_property import cached_property
 from pydantic import BaseModel, ValidationError
 from threading import Thread
 from multiprocessing.queues import Queue
-from module.config.utils import convert_to_underscore
+from module.config.utils import configured_device_id, convert_to_underscore
 from module.config.config import Config
 from module.config.anti_ban import AntiBanGuard
 from module.device.device import Device
@@ -299,7 +299,7 @@ class Script:
         self.config.start_watching()
         while 1:
             from tasks.AssetSnapshot.capture import CaptureQueue, store_for
-            if CaptureQueue(store_for(self.config).repository).pending(self.config.script.device.serial):
+            if CaptureQueue(store_for(self.config).repository).pending(configured_device_id(self.config)):
                 return False
             if datetime.now() > future:
                 return True
@@ -355,8 +355,9 @@ class Script:
         """
         while True:
             from tasks.AssetSnapshot.capture import consume_for, device_key
-            locked_serial = getattr(self, 'capture_lock_serial', str(self.config.script.device.serial))
-            if device_key(locked_serial) != device_key(self.config.script.device.serial):
+            device_id = configured_device_id(self.config)
+            locked_serial = getattr(self, 'capture_lock_serial', device_id)
+            if device_key(locked_serial) != device_key(device_id):
                 raise RequestHumanTakeover('设备设置已改变，请停止后重新启动脚本')
             if consume_for(self.config):
                 del_cached_property(self, 'config')
@@ -451,7 +452,9 @@ class Script:
 
         self._reset_task_runtime_outcome()
         try:
-            self.device.screenshot()
+            # Restart 在桌面模式下负责拉起窗口，不能要求它先有可截图的窗口。
+            if command != 'Restart' or not self.device.is_desktop:
+                self.device.screenshot()
             module_name = 'script_task'
             module_path = str(Path.cwd() / 'tasks' / command / (module_name + '.py'))
             logger.info(f'module_path: {module_path}, module_name: {module_name}')
@@ -474,7 +477,8 @@ class Script:
         self.anti_ban_guard.reset()
 
         # Update GUI 防呆, 读取设置并立刻显示后台模拟器到前台
-        if not self.config.script.device.run_background_only and IS_WINDOWS:
+        if (IS_WINDOWS and not self.config.script.desktop.enable
+                and not self.config.script.device.run_background_only):
             from module.device.platform2.platform_windows import minimize_by_name, show_window_by_name
             target_window_name = self.config.script.device.handle  # 在这里输入你的具体窗口名称
             if self.config.script.device.emulator_window_minimize:

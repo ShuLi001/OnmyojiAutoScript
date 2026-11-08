@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from filelock import FileLock
 
+from module.config.utils import configured_device_id
 from tasks.AssetSnapshot.repository import utc_now
 
 
@@ -25,7 +26,7 @@ def device_lock(serial, root="config/asset_snapshot"):
 def store_for(config, root="config/asset_snapshot"):
     from tasks.AssetSnapshot.assets import AssetSnapshotAssets
     from tasks.AssetSnapshot.history import SnapshotStore
-    return SnapshotStore(root, config.config_name, str(config.script.device.serial),
+    return SnapshotStore(root, config.config_name, configured_device_id(config),
                          str(config.restart.login_character_config.character), AssetSnapshotAssets.VARIABLE_MAPPING,
                          generation=config.asset_snapshot.asset_snapshot_config.history_generation)
 
@@ -136,7 +137,7 @@ class CaptureQueue:
 
 def consume_for(config):
     store = store_for(config)
-    return CaptureQueue(store.repository).consume(config.script.device.serial)
+    return CaptureQueue(store.repository).consume(configured_device_id(config))
 
 
 def worker(config_name):
@@ -144,6 +145,6 @@ def worker(config_name):
     from module.logger import logger
     logger.set_file_logger(config_name, do_cleanup=False)
     config = Config(config_name)
-    with device_lock(config.script.device.serial):
+    with device_lock(configured_device_id(config)):
         while consume_for(config):
             pass

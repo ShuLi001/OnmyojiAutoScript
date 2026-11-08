@@ -68,7 +68,7 @@ class Screenshot(Adb, DroidCast, Scrcpy, Window, NemuIpc):
 
         for _ in range(2):
             method = self.screenshot_methods.get(
-                self.config.script.device.screenshot_method,
+                'window_background' if self.is_desktop else self.config.script.device.screenshot_method,
                 self.screenshot_adb  # 第二个参数默认的是screenshot_adb
             )
             self.image = method()
@@ -169,16 +169,25 @@ class Screenshot(Adb, DroidCast, Scrcpy, Window, NemuIpc):
         """
         if interval is None:
             origin = self.config.script.optimization.screenshot_interval
-            interval = limit_in(origin, 0.1, 0.3)
+            # 分支判断放在夹取之前：写回发生在各自的 clamp 之后，先夹取会按错误的
+            # 区间改写用户配置。桌面模式 BitBlt 单帧约 5ms，允许更小间隔
+            if getattr(self, 'is_desktop', False):
+                interval = limit_in(origin, 0.05, 0.3)
+            elif self.config.Emulator_ScreenshotMethod == 'nemu_ipc':
+                # nemu_ipc 截图便宜，允许更小默认
+                interval = limit_in(origin, 0.1, 0.2)
+            else:
+                interval = limit_in(origin, 0.1, 0.3)
             if interval != origin:
                 logger.warning(f'Optimization.ScreenshotInterval {origin} is revised to {interval}')
                 self.config.script.optimization.screenshot_interval = interval
-            # Allow nemu_ipc to have a lower default
-            if self.config.Emulator_ScreenshotMethod == 'nemu_ipc':
-                interval = limit_in(origin, 0.1, 0.2)
         elif interval == 'combat':
             origin = self.config.script.optimization.combat_screenshot_interval
-            interval = limit_in(origin, 0.3, 1.0)
+            if getattr(self, 'is_desktop', False):
+                # 桌面模式战斗轮询不受 adb 成本约束，允许更小间隔
+                interval = limit_in(origin, 0.1, 1.0)
+            else:
+                interval = limit_in(origin, 0.3, 1.0)
             if interval != origin:
                 logger.warning(f'Optimization.CombatScreenshotInterval {origin} is revised to {interval}')
                 self.config.script.optimization.combat_screenshot_interval = interval
@@ -191,7 +200,7 @@ class Screenshot(Adb, DroidCast, Scrcpy, Window, NemuIpc):
         # Screenshot interval in scrcpy is meaningless,
         # video stream is received continuously no matter you use it or not.
         # if self.config.script.device.screenshot_method == 'scrcpy':
-        if self.config.script.device.screenshot_method == 'scrcpy':
+        if not self.is_desktop and self.config.script.device.screenshot_method == 'scrcpy':
             interval = 0.1
 
         if interval != self._screenshot_interval.limit:
@@ -251,6 +260,9 @@ class Screenshot(Adb, DroidCast, Scrcpy, Window, NemuIpc):
         # May get a pure black screenshot on some emulators.
         color = get_color(self.image, area=(0, 0, 1280, 720))
         if sum(color) < 1:
+            if self.is_desktop:
+                logger.warning('Desktop client returned a black frame')
+                return False
             # if self.config.Emulator_Serial == 'wsa-0':
             #     for _ in range(2):
             #         display = self.get_display_id()
