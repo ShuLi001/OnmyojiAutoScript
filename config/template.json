@@ -2000,7 +2000,7 @@
       "history_generation": 0,
       "max_reset_swipes": 3,
       "max_scan_swipes": 10,
-      "match_threshold": 0.95
+      "match_threshold": 0.90
     }
   }
 }

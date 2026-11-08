@@ -7,14 +7,17 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Mapping
 
+import numpy as np
+
 TOP_RESOURCE_VARIABLES = frozenset({"gold", "stamina", "jade", "soul_jade"})
 UNSUPPORTED_MATERIAL_VARIABLES = frozenset({"eternal_divine_talisman", "limited_mystic_talisman"})
 
 MATERIAL_GRID_ROI = (271, 188, 505, 495)
+DEFAULT_MATERIAL_MATCH_THRESHOLD = 0.90
 CELL_SIZE = (95, 95)
 MATERIAL_MATCH_TEMPLATE_SIZE = (95, 70)
 ICON_IN_CELL_OFFSET = (7, 7)
-QUANTITY_RELATIVE_TO_CELL = (40, 64, 55, 31)
+QUANTITY_RELATIVE_TO_CELL = (25, 64, 70, 31)
 # Exclude the artwork lettering next to the quantity on this card.
 MATERIAL_QUANTITY_ROI_OVERRIDES = {"myriad_soul": (67, 70, 27, 23)}
 SWIPE_ROWS = 3.5
@@ -83,6 +86,42 @@ def quantity_roi_from_card_match(
     return match_area[0] + rel_x, match_area[1] + rel_y, width, height
 
 
+def inventory_card_selected(image: np.ndarray, area: tuple[int, int, int, int]) -> bool:
+    """Confirm the cyan selection border before trusting the details panel."""
+    x, y, _, _ = area
+    height, width = image.shape[:2]
+    card = image[max(0, y - 3):min(height, y + 98), max(0, x - 3):min(width, x + 98)]
+    if not card.size:
+        return False
+    card = card.astype(np.int16)
+    ring = np.zeros(card.shape[:2], dtype=bool)
+    ring[:8, :] = ring[-8:, :] = True
+    ring[:, :8] = ring[:, -8:] = True
+    cyan = (
+        (card[:, :, 1] > 170) & (card[:, :, 2] > 170)
+        & (card[:, :, 1] - card[:, :, 0] > 60)
+        & (card[:, :, 2] - card[:, :, 0] > 70)
+    )
+    return np.count_nonzero(cyan & ring) >= 60
+
+
+def normalize_inventory_title(text: object) -> str:
+    return re.sub(r"[\s_·・.\-－]", "", str(text)).rstrip("，,。").casefold()
+
+
+def parse_inventory_quantity(raw: object) -> int | None:
+    text = "" if raw is None else str(raw).strip()
+    # A clipped count can look like 0843; inventory counts do not pad with zeroes.
+    if re.match(r"0[0-9,，]", text) or ("." in text and not text.endswith(("万", "亿", "千"))):
+        return None
+    return parse_top_resource_quantity(text)
+
+
+def inventory_detail_quantity(text: object) -> str | None:
+    reading = re.fullmatch(r"\s*持有\s*[:：]\s*(.+?)\s*", str(text))
+    return reading[1] if reading and parse_inventory_quantity(reading[1]) is not None else None
+
+
 def build_swipe_points(
     start: tuple[int, int],
     end: tuple[int, int],
@@ -114,7 +153,7 @@ def scroll_boundary_state(*, top: bool, bottom: bool) -> str:
     return "unknown"
 
 
-def classify_match_score(score: float, threshold: float = 0.95) -> str:
+def classify_match_score(score: float, threshold: float = DEFAULT_MATERIAL_MATCH_THRESHOLD) -> str:
     return "accepted" if float(score) >= threshold else "below_threshold"
 
 

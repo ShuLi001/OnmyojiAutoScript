@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-import numpy as np
+from tasks.AssetSnapshot.asset_snapshot import inventory_card_selected as skin_ticket_selected
 
 
 SKIN_TICKET_VARIABLES = frozenset({"skin_ticket", "sp_skin_ticket"})
@@ -22,9 +22,6 @@ class SkinTicketCandidate:
     sp_score: float
     badge_score: float | None
     variable_name: str | None
-
-    def score_for(self, variable_name: str) -> float:
-        return self.sp_score if variable_name == "sp_skin_ticket" else self.normal_score
 
 
 def classify_skin_ticket(
@@ -56,22 +53,3 @@ def skin_ticket_name(text: object) -> str | None:
     if name in {"皮肤券", "皮肤劵"}:
         return "skin_ticket"
     return None
-
-
-def skin_ticket_selected(image: np.ndarray, area: tuple[int, int, int, int]) -> bool:
-    """Confirm the cyan selection border before trusting the details panel."""
-    x, y, _, _ = area
-    height, width = image.shape[:2]
-    card = image[max(0, y - 3):min(height, y + 98), max(0, x - 3):min(width, x + 98)]
-    if not card.size:
-        return False
-    card = card.astype(np.int16)
-    ring = np.zeros(card.shape[:2], dtype=bool)
-    ring[:8, :] = ring[-8:, :] = True
-    ring[:, :8] = ring[:, -8:] = True
-    cyan = (
-        (card[:, :, 1] > 170) & (card[:, :, 2] > 170)
-        & (card[:, :, 1] - card[:, :, 0] > 60)
-        & (card[:, :, 2] - card[:, :, 0] > 70)
-    )
-    return np.count_nonzero(cyan & ring) >= 60

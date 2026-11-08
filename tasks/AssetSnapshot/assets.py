@@ -9,6 +9,7 @@ from module.atom.ocr import RuleOcr
 from module.atom.swipe import RuleSwipe
 
 from tasks.AssetSnapshot.asset_snapshot import (
+    DEFAULT_MATERIAL_MATCH_THRESHOLD,
     MATERIAL_GRID_ROI,
     MATERIAL_MATCH_TEMPLATE_SIZE,
     MATERIAL_SWIPE_END,
@@ -181,7 +182,7 @@ class AssetSnapshotAssets:
         RuleImage(
             roi_front=(0, 0, *MATERIAL_MATCH_TEMPLATE_SIZE),
             roi_back=MATERIAL_GRID_ROI,
-            threshold=0.95,
+            threshold=DEFAULT_MATERIAL_MATCH_THRESHOLD,
             method="Template matching",
             file=f"./tasks/AssetSnapshot/assets/templates/{template_path}",
         )
@@ -225,4 +226,19 @@ class AssetSnapshotAssets:
         roi=(930, 148, 180, 36), area=(930, 148, 180, 36),
         mode="Single", method="Default", keyword="",
         name="asset_snapshot_ticket_detail_quantity",
+    )
+    O_MATERIAL_DETAIL_NAME = RuleOcr(
+        roi=(849, 111, 228, 42), area=(849, 111, 228, 42),
+        mode="Single", method="Default", keyword="",
+        name="材料详情名称",
+    )
+    O_MATERIAL_DETAIL_NAME_RETRY = RuleOcr(
+        roi=(850, 105, 255, 42), area=(850, 105, 255, 42),
+        mode="Single", method="Default", keyword="",
+        name="材料详情名称复核",
+    )
+    O_MATERIAL_DETAIL_OWNED = RuleOcr(
+        roi=(850, 150, 192, 34), area=(850, 150, 192, 34),
+        mode="Single", method="Default", keyword="",
+        name="材料详情持有量",
     )

@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import json
 import time
-import re
+from collections import Counter
 from copy import copy
 from datetime import datetime
 from uuid import uuid4
 from decimal import Decimal
 from pathlib import Path
-from typing import Mapping
+from typing import Callable, Mapping
 
 import numpy as np
 
+from module.atom.click import RuleClick
 from module.config.utils import configured_device_id
 from module.exception import ScriptError, TaskEnd
 from module.image.rpc import get_image_client
@@ -20,21 +21,31 @@ from tasks.AssetSnapshot.quantity_ocr import InventoryQuantityOcr as RuleOcr
 from tasks.GameUi.game_ui import GameUi
 
 from tasks.AssetSnapshot.asset_snapshot import (
+    DEFAULT_MATERIAL_MATCH_THRESHOLD,
     build_empty_snapshot,
     build_snapshot_payload,
     build_swipe_points,
     classify_match_score,
+    inventory_card_selected,
+    inventory_detail_quantity,
     merge_snapshot_values,
+    normalize_inventory_title,
     MATERIAL_SWIPE_END,
     MATERIAL_SWIPE_START,
     UNSUPPORTED_MATERIAL_VARIABLES,
-    normalize_quantity,
+    parse_inventory_quantity,
     parse_stamina_detail_quantity,
     parse_top_resource_quantity,
     quantity_roi_from_card_match,
     scroll_boundary_state,
 )
-from tasks.AssetSnapshot.assets import AssetSnapshotAssets
+from tasks.AssetSnapshot.assets import MATERIAL_MAPPING, AssetSnapshotAssets
+from tasks.AssetSnapshot.auspicious_demons import (
+    DEMON_NAMES,
+    DEMON_VARIABLES,
+    demon_detail_variable,
+    find_demon_candidates,
+)
 from tasks.AssetSnapshot.config import AssetSnapshotConfig
 from tasks.AssetSnapshot.history import SnapshotStore
 from tasks.AssetSnapshot.repository import parse_time, utc_now
@@ -51,6 +62,10 @@ from tasks.GameUi.page import page_main
 from tasks.Component.Login.service import LoginService
 
 
+MATERIAL_DETAIL_NAMES = {normalize_inventory_title(name): variable for name, variable in MATERIAL_MAPPING.items()}
+MATERIAL_DETAIL_NAMES["ssr全集赏体验卡"] = "ssr_collection_trial"
+
+
 class ScriptTask(GameUi, AssetSnapshotAssets):
     """登录、进入纳物库，首次全量读取，后续增量更新，再返回庭院。"""
 
@@ -62,7 +77,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
     swipe_duration = (0.45, 0.65)
     swipe_random_x_offset = 18
     swipe_random_y_offset = 10
-    material_match_threshold = 0.95
+    material_match_threshold = DEFAULT_MATERIAL_MATCH_THRESHOLD
 
     def _settings(self) -> AssetSnapshotConfig:
         task_config = getattr(self.config, "asset_snapshot", None)
@@ -130,8 +145,6 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         self.observation_metadata = {}
         self.quantity_read_metadata = {}
         self.read_failures = set()
-        self.quantity_match_scores = {}
-        self.ticket_detail_cache = {}
         self.scan_category = category
         self.screenshot()
         if not self.appear(self.I_CHECK_INVENTORY):
@@ -144,27 +157,33 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                   if category == "recent" else build_empty_snapshot(self.VARIABLE_MAPPING))
         top_values = self._scan_top_resources()
         values.update(top_values)
+        historical_materials = {
+            name for name, count in (previous_values or {}).items()
+            if category == "composite" and count > 0 and name not in top_values
+            and name not in UNSUPPORTED_MATERIAL_VARIABLES
+        }
         try:
-            if not self._scan_material_pages(values):
+            if not self._scan_material_pages(values, historical_materials=historical_materials):
                 raise ScriptError("纳物库扫描达到滑动上限，保留旧历史，下次重试")
-            missing_positive = [name for name, count in (previous_values or {}).items()
-                                if count > 0 and name not in top_values and name not in self.quantity_observations
-                                and name not in UNSUPPORTED_MATERIAL_VARIABLES]
-            if category == "composite" and missing_positive:
-                logger.info(f"AssetSnapshot recheck missing historical materials: {missing_positive}")
-                self._reset_material_grid_to_top()
-                if not self._scan_material_pages(values):
-                    raise ScriptError("综合复查未完成，保留旧历史")
         finally:
             self._write_match_score_diagnostics()
         for name in UNSUPPORTED_MATERIAL_VARIABLES:
             values[name] = 0
+        previous_assets = getattr(self, "previous_assets", {})
+        unresolved_demons = (self.read_failures & DEMON_VARIABLES) - self.quantity_observations.keys()
+        missing_demon_history = [
+            name for name in sorted(unresolved_demons)
+            if (previous_assets[name].get("quantity") if name in previous_assets
+                else (previous_values or {}).get(name)) is None
+        ]
+        if missing_demon_history:
+            names = "、".join(DEMON_NAMES[name] for name in missing_demon_history)
+            raise ScriptError(f"{names}本轮未确认且没有历史数量，暂不保存资产快照")
         payload = build_snapshot_payload(
             values,
             updated_at=utc_now(),
         )
         observed = {**top_values, **self.quantity_observations}
-        previous_assets = getattr(self, "previous_assets", {})
         assets = {}
         for name, quantity in values.items():
             previous = previous_assets.get(name, {})
@@ -177,7 +196,9 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                 item = {"source": "observed", "precision": "exact", "readStatus": "ok",
                         "observedAt": payload["updatedAt"], **self.observation_metadata.get(name, {})}
             else:
-                item = {**previous, "source": "carried" if category == "recent" else "assumed_zero",
+                carried = category == "recent" or (name in self.read_failures and last_quantity is not None)
+                source = "carried" if carried else "assumed_zero"
+                item = {**previous, "source": source,
                         "readStatus": "ocr_failed" if name in self.read_failures else "not_seen", "quantity": last_quantity,
                         "observedAt": previous.get("observedAt"), "precision": previous.get("precision", "unknown")}
             item.setdefault("quantity", quantity)
@@ -324,8 +345,10 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         if not self.appear(self.I_CHECK_INVENTORY) or self.appear(marker):
             raise ScriptError(f"无法确认{display_name}详情已关闭，停止扫描并保留旧历史")
 
-    def _scan_material_pages(self, values: dict[str, int]) -> bool:
+    def _scan_material_pages(self, values: dict[str, int], *, historical_materials: set[str] | None = None) -> bool:
         previous_signature = None
+        pending = set()
+        page_details = {}
         for page_index in range(self.max_scan_swipes + 1):
             # Material OCR can take longer than the image server frame TTL.  Always
             # register a fresh frame before using it for the next page.
@@ -337,30 +360,19 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                 boundary = self._scroll_boundary_state()
                 if boundary == "bottom" or (boundary == "top" and page_index == 1):
                     logger.info("AssetSnapshot grid stopped at end of list")
-                    return True
+                    break
                 logger.warning("AssetSnapshot swipe made no progress inside list")
                 return False
             previous_signature = signature
 
-            matches = self._find_material_matches(page_index)
-            for rule, score, area in matches:
-                variable_name = self.MATERIAL_RULE_TO_VARIABLE[id(rule)]
-                quantity = self._read_material_quantity(area, variable_name=variable_name)
-                if quantity is None and hasattr(self, 'read_failures'):
-                    self.read_failures.add(variable_name)
-                if quantity is not None and score > self.quantity_match_scores.get(variable_name, -1.0):
-                    values[variable_name] = quantity
-                    self.quantity_observations[variable_name] = quantity
-                    if hasattr(self, "observation_metadata"):
-                        self.observation_metadata[variable_name] = getattr(self, 'quantity_read_metadata', {}).get(variable_name, {"observedAt": utc_now()})
-                    self.quantity_match_scores[variable_name] = score
-                logger.debug(f"AssetSnapshot material={variable_name} score={score:.6f} quantity={quantity} area={area}")
-
+            page_details = self._scan_matched_materials(values, page_index)
+            pending.update(page_details)
+            self._scan_auspicious_demons(values, page_index)
             self._scan_skin_tickets(values, page_index)
             boundary = self._scroll_boundary_state()
             if boundary == "bottom":
                 logger.info("AssetSnapshot material grid reached bottom marker")
-                return True
+                break
             if page_index >= self.max_scan_swipes:
                 logger.warning(f"AssetSnapshot scan reached max_scan_swipes={self.max_scan_swipes}")
                 return False
@@ -371,12 +383,88 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                 control_name=self.S_MATERIAL_GRID_UP.name,
             )
             self._wait_for_material_grid_stability()
-        return False
+        else:
+            return False
 
-    @staticmethod
-    def _parse_ocr_quantity(raw: object) -> int | None:
-        text = str(raw).strip() if raw is not None else ""
-        return normalize_quantity(raw) if re.search(r"[0-9OoIl丨]", text) else None
+        pending.difference_update(self.quantity_observations)
+        historical_missing = (historical_materials or set()) - self.quantity_observations.keys()
+        targets = pending | historical_missing
+        if targets:
+            logger.info(f"资产快照：列表扫描结束，复查 {len(targets)} 项未确认材料")
+            self._finish_material_details(values, page_index, boundary, pending, targets, page_details)
+        return True
+
+    def _remember_quantity(self, values: dict[str, int], variable: str, quantity: int) -> None:
+        # The per-scan observations are also the cache, including confirmed zero.
+        if variable in self.quantity_observations:
+            return
+        values[variable] = self.quantity_observations[variable] = quantity
+        if hasattr(self, "observation_metadata"):
+            metadata = getattr(self, "quantity_read_metadata", {}).get(variable, {"observedAt": utc_now()})
+            self.observation_metadata[variable] = metadata
+
+    def _scan_matched_materials(
+        self, values: dict[str, int], page_index: int, *, only: set[str] | None = None,
+    ) -> dict[str, tuple[int, int, int, int]]:
+        slots = {}
+        for rule, score, area in self._find_material_matches(page_index, only=only):
+            variable = self.MATERIAL_RULE_TO_VARIABLE[id(rule)]
+            if variable not in self.quantity_observations and (variable not in slots or score > slots[variable][0]):
+                slots[variable] = (score, area)
+        needs_detail = {}
+        for variable, (_, area) in slots.items():
+            quantity = self._read_material_quantity(area, variable_name=variable)
+            if quantity is None:
+                needs_detail[variable] = area
+            else:
+                self._remember_quantity(values, variable, quantity)
+                logger.debug(f"AssetSnapshot material={variable} quantity={quantity} source=grid area={area}")
+        return needs_detail
+
+    def _finish_material_details(
+        self, values: dict[str, int], page_index: int, boundary: str,
+        pending: set[str], targets: set[str], page_details: dict[str, tuple[int, int, int, int]],
+    ) -> None:
+        for step in range(self.max_scan_swipes + 1):
+            if step:
+                before = self._material_grid_signature()
+                self._swipe_material_grid(
+                    start=MATERIAL_SWIPE_END, end=MATERIAL_SWIPE_START,
+                    control_name=self.S_MATERIAL_GRID_DOWN.name,
+                )
+                self._wait_for_material_grid_stability()
+                self._refresh_inventory_frame("material recheck")
+                if not self.appear(self.I_CHECK_INVENTORY):
+                    raise ScriptError("复查材料期间离开纳物库，保留旧历史")
+                if self._material_grid_signature() == before:
+                    break
+                boundary = self._scroll_boundary_state()
+                index = page_index + step
+                page_details = self._scan_matched_materials(values, index, only=targets)
+                pending.update(page_details)
+                if targets & DEMON_VARIABLES:
+                    self._scan_auspicious_demons(values, index)
+                if targets & SKIN_TICKET_VARIABLES:
+                    self._scan_skin_tickets(values, index)
+
+            targets.difference_update(self.quantity_observations)
+            for variable, area in page_details.items():
+                if variable not in targets:
+                    continue
+                targets.remove(variable)
+                detail = self._read_inventory_detail(
+                    area, expected_variable=variable,
+                    title_resolver=lambda text: MATERIAL_DETAIL_NAMES.get(normalize_inventory_title(text)),
+                    control_name="asset_snapshot_material_detail",
+                )
+                if detail is not None:
+                    _, quantity = detail
+                    self._remember_quantity(values, variable, quantity)
+                    logger.debug(f"AssetSnapshot material={variable} quantity={quantity} source=detail area={area}")
+            if not targets or boundary == "top" or page_index == 0:
+                break
+
+        self.read_failures.update(pending - self.quantity_observations.keys())
 
     def _read_material_quantity(
         self,
@@ -385,28 +473,30 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         variable_name: str | None = None,
     ) -> int | None:
         roi = quantity_roi_from_card_match(match_area, variable_name=variable_name)
-        # The inventory fades out the last row at y=660, above the panel boundary.
-        visible_height = min(roi[3], 660 - roi[1])
-        if visible_height < 18:
+        # A clipped or faded last row is not a reliable quantity source.
+        if roi[1] + roi[3] > 660:
             return None
-        roi = (roi[0], roi[1], roi[2], visible_height)
-        rule = RuleOcr(
-            roi=roi,
-            area=roi,
-            mode="Quantity",
-            method="Default",
-            keyword="",
-            name=f"asset_snapshot_quantity_{roi[0]}_{roi[1]}",
-        )
-        # Filtering also retains this card's white lettering and selected border.
-        # Its existing tight crop reads both selection states correctly without filtering.
-        if variable_name == "myriad_soul":
-            rule.filter_white = False
-        # Keep the detector's number box: whole-line OCR also reads artwork lettering.
-        boxes = rule.detect_and_ocr(self.device.image)
-        raw = boxes[0].ocr_text if boxes else None
-        result = self._parse_ocr_quantity(raw)
-        if result is not None and variable_name and hasattr(self, 'quantity_read_metadata'):
+
+        def read(*, filtered: bool):
+            rule = RuleOcr(
+                roi=roi, area=roi, mode="Single", method="Default", keyword="",
+                name=f"asset_snapshot_quantity_{roi[0]}_{roi[1]}_{'filtered' if filtered else 'raw'}",
+            )
+            rule.filter_white = filtered
+            boxes = rule.detect_and_ocr(self.device.image)
+            if len(boxes) != 1:
+                return None, None
+            raw = boxes[0].ocr_text
+            return parse_inventory_quantity(raw), raw
+
+        result, raw = read(filtered=False)
+        if result is None:
+            return None
+        # The tight 万象之魄 crop already avoids its artwork text. For other
+        # materials, require agreement before caching a grid reading.
+        if variable_name != "myriad_soul" and read(filtered=True)[0] != result:
+            return None
+        if variable_name and hasattr(self, "quantity_read_metadata"):
             self.quantity_read_metadata[variable_name] = self._quantity_metadata(raw)
         return result
 
@@ -422,14 +512,23 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
     def _find_material_matches(
         self,
         page_index: int,
+        *,
+        only: set[str] | None = None,
     ) -> list[tuple[object, float, tuple[int, int, int, int]]]:
+        rules = [
+            rule for rule in self.MATERIAL_RULES
+            if self.MATERIAL_RULE_TO_VARIABLE[id(rule)] not in DEMON_VARIABLES
+            and (only is None or self.MATERIAL_RULE_TO_VARIABLE[id(rule)] in only)
+        ]
+        if not rules:
+            return []
         results = self._match_many_with_frame_retry(
-            self.MATERIAL_RULES,
+            rules,
             purpose=f"material page {page_index + 1}",
             threshold=0.0,
         )
         matches = []
-        for rule, result in zip(self.MATERIAL_RULES, results):
+        for rule, result in zip(rules, results):
             variable_name = self.MATERIAL_RULE_TO_VARIABLE[id(rule)]
             score = float(result.get("score", 0.0))
             roi_front = result.get("roi_front")
@@ -457,6 +556,99 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                     )
                 )
         return sorted(matches, key=lambda item: item[2][1])
+
+    def _scan_auspicious_demons(self, values: dict[str, int], page_index: int) -> None:
+        if DEMON_VARIABLES <= self.quantity_observations.keys():
+            return
+        candidates = find_demon_candidates(self.device.image)
+        counts = Counter(candidate.variable for candidate in candidates)
+        for candidate in candidates:
+            variable = candidate.variable
+            if counts[variable] == 1 and variable in self.quantity_observations:
+                detail = (variable, self.quantity_observations[variable])
+            else:
+                # The printed orange digits can corrupt the stock OCR even when
+                # the star badge matches correctly. Confirm through the detail panel.
+                detail = self._read_auspicious_demon_detail(candidate.area)
+            if detail is None:
+                self.read_failures.update({variable} if variable and counts[variable] == 1 else DEMON_VARIABLES)
+                logger.warning(f"青吉鬼详情未确认：格子 ({candidate.area[0]}, {candidate.area[1]})")
+                quantity, method = None, "detail"
+            else:
+                variable, quantity = detail
+                method = "cache" if variable in self.quantity_observations else "detail"
+                self._remember_quantity(values, variable, quantity)
+            record = {
+                "page": page_index + 1, "kind": "auspicious_demon_verification",
+                "area": list(candidate.area), "body_score": round(candidate.body_score, 6),
+                "badge_scores": {name: round(score, 6) for name, score in candidate.badge_scores.items()},
+                "grid_variable": candidate.variable, "variable_name": variable, "method": method,
+                "quantity": quantity, "status": "accepted" if quantity is not None else "unconfirmed",
+            }
+            self.match_score_records.append(record)
+            if quantity is not None and method == "detail":
+                logger.info(f"资产快照：{DEMON_NAMES[variable]} {quantity} 个（详情）")
+
+    def _read_auspicious_demon_detail(self, area: tuple[int, int, int, int]) -> tuple[str, int] | None:
+        return self._read_inventory_detail(
+            area, expected_variable=None, title_resolver=demon_detail_variable,
+            control_name="asset_snapshot_demon_detail",
+        )
+
+    def _click_inventory_card(self, area: tuple[int, int, int, int], control_name: str) -> bool:
+        if getattr(self.device, "image", None) is None:
+            return False
+        x, y, _, _ = area
+        height = min(32, 660 - (y + 22))
+        if y + 22 < self.MATERIAL_GRID_ROI[1] or height < 12:
+            return False
+        click_area = (x + 23, y + 22, 45, height)
+        self.device.click_record_clear()
+        self.click(RuleClick(click_area, click_area, name=control_name))
+        return True
+
+    def _read_inventory_detail(
+        self,
+        area: tuple[int, int, int, int],
+        *,
+        expected_variable: str | None,
+        title_resolver: Callable[[str], str | None],
+        control_name: str,
+    ) -> tuple[str, int] | None:
+        if not self._click_inventory_card(area, control_name):
+            return None
+        previous = None
+        for _ in range(3):
+            time.sleep(0.4)
+            self._refresh_inventory_frame("material detail")
+            if not self.appear(self.I_CHECK_INVENTORY):
+                raise ScriptError("读取材料详情期间离开纳物库，保留旧历史")
+            if not inventory_card_selected(self.device.image, area):
+                previous = None
+                continue
+            variable = None
+            for rule in (self.O_MATERIAL_DETAIL_NAME, self.O_MATERIAL_DETAIL_NAME_RETRY):
+                variable = title_resolver(rule.ocr_single_line(self.device.image))
+                if variable is not None and (expected_variable is None or variable == expected_variable):
+                    break
+            if variable is None or (expected_variable is not None and variable != expected_variable):
+                previous = None
+                continue
+            cached = self.quantity_observations.get(variable)
+            raw = None if cached is not None else inventory_detail_quantity(
+                self.O_MATERIAL_DETAIL_OWNED.ocr_single_line(self.device.image)
+            )
+            quantity = cached if cached is not None else parse_inventory_quantity(raw)
+            if quantity is None:
+                previous = None
+                continue
+            reading = (variable, quantity)
+            if reading == previous:
+                if raw is not None:
+                    self.quantity_read_metadata[variable] = self._quantity_metadata(raw)
+                return reading
+            previous = reading
+        return None
 
     @staticmethod
     def _ticket_region_rule(rule, roi):
@@ -508,6 +700,8 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         return sorted(candidates, key=lambda candidate: candidate.area[1])
 
     def _scan_skin_tickets(self, values: dict[str, int], page_index: int) -> None:
+        if SKIN_TICKET_VARIABLES <= self.quantity_observations.keys():
+            return
         for candidate in self._find_skin_ticket_candidates(page_index):
             variable = candidate.variable_name
             record = {
@@ -517,30 +711,20 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                 "badge_score": candidate.badge_score, "area": list(candidate.area),
             }
             self.match_score_records.append(record)
-            quantity = None
-            if variable == "skin_ticket":
-                quantity = self._read_material_quantity(candidate.area, variable_name=variable)
-            elif variable == "sp_skin_ticket":
-                quantity = self.ticket_detail_cache.get(variable)
-            if quantity is None:
+            if variable in self.quantity_observations:
+                quantity = self.quantity_observations[variable]
+            else:
                 detail = self._read_skin_ticket_detail(candidate.area, expected_variable=variable)
                 if detail is None:
                     record["status"] = "detail_failed"
                     raise ScriptError("无法确认皮肤券类型或数量，保留旧历史，下次重试")
                 variable, quantity = detail
-                self.ticket_detail_cache[variable] = quantity
-            record.update(variable_name=variable, quantity=quantity, status="accepted")
-            score = candidate.score_for(variable)
-            if score > self.quantity_match_scores.get(variable, -1.0):
-                values[variable] = quantity
-                self.quantity_observations[variable] = quantity
-                if hasattr(self, "observation_metadata"):
-                    self.observation_metadata[variable] = getattr(self, 'quantity_read_metadata', {}).get(variable, {"observedAt": utc_now()})
-                self.quantity_match_scores[variable] = score
-            logger.info(
-                f"AssetSnapshot ticket={variable} quantity={quantity} "
-                f"score={score:.6f} SP_badge_score={candidate.badge_score}"
-            )
+            cached = variable in self.quantity_observations
+            self._remember_quantity(values, variable, quantity)
+            record.update(variable_name=variable, quantity=quantity, status="accepted",
+                          method="cache" if cached else "detail")
+            if not cached:
+                logger.info(f"AssetSnapshot ticket={variable} quantity={quantity} source=detail")
 
     def _read_skin_ticket_detail(
         self,
@@ -548,8 +732,8 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         *,
         expected_variable: str | None,
     ) -> tuple[str, int] | None:
-        self.device.click_record_clear()
-        self.device.click(area[0] + 45, area[1] + 30, control_name="asset_snapshot_ticket_detail")
+        if not self._click_inventory_card(area, "asset_snapshot_ticket_detail"):
+            return None
         previous = None
         for _ in range(3):
             time.sleep(0.4)
@@ -563,18 +747,19 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             if variable is None or (expected_variable is not None and variable != expected_variable):
                 previous = None
                 continue
-            boxes = self.O_TICKET_DETAIL_QUANTITY.detect_and_ocr(self.device.image)
-            text = "".join(str(box.ocr_text).strip() for box in boxes)
-            if not re.fullmatch(r"\d+(?:\.\d+)?[万亿千]?", text):
+            quantity = self.quantity_observations.get(variable)
+            text = None
+            if quantity is None:
+                boxes = self.O_TICKET_DETAIL_QUANTITY.detect_and_ocr(self.device.image)
+                if len(boxes) == 1:
+                    text = boxes[0].ocr_text
+                    quantity = parse_inventory_quantity(text)
+            if quantity is None:
                 previous = None
                 continue
-            reading = (variable, normalize_quantity(text))
-            logger.info(
-                f"AssetSnapshot ticket detail={variable} quantity={reading[1]} "
-                f"OCR_scores={[round(float(box.score), 6) for box in boxes]}"
-            )
+            reading = (variable, quantity)
             if reading == previous:
-                if hasattr(self, 'quantity_read_metadata'):
+                if text is not None and hasattr(self, "quantity_read_metadata"):
                     self.quantity_read_metadata[variable] = self._quantity_metadata(text)
                 return reading
             previous = reading

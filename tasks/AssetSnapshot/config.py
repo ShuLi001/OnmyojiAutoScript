@@ -1,5 +1,6 @@
 from pydantic import Field
 
+from tasks.AssetSnapshot.asset_snapshot import DEFAULT_MATERIAL_MATCH_THRESHOLD
 from tasks.Component.config_base import ConfigBase
 from tasks.Component.config_scheduler import Scheduler
 
@@ -10,7 +11,7 @@ class AssetSnapshotConfig(ConfigBase):
     history_generation: int = Field(default=0, ge=0, description="asset_history_generation_help")
     max_reset_swipes: int = Field(default=3, ge=0, le=3)
     max_scan_swipes: int = Field(default=10, ge=0, le=10)
-    match_threshold: float = Field(default=0.95, ge=0.80, le=1.0)
+    match_threshold: float = Field(default=DEFAULT_MATERIAL_MATCH_THRESHOLD, ge=0.80, le=1.0)
 
 
 class AssetSnapshot(ConfigBase):
