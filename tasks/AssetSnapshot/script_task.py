@@ -127,7 +127,8 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         saved = store.save(payload, category, history)
         if isinstance(saved, dict):
             payload["snapshotId"] = saved["snapshotId"]
-        logger.info(f"AssetSnapshot saved {category} snapshot: {store.path}")
+        logger.info(f"AssetSnapshot saved {category} snapshot")
+        logger.debug(f"AssetSnapshot snapshot path: {store.path}")
         return payload
 
     def scan(self, *, category: str = "composite",
@@ -207,7 +208,8 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             assets[name] = item
         payload['values'] = dict(values)
         payload["assets"] = assets
-        logger.info(f"AssetSnapshot payload: {json.dumps(payload, ensure_ascii=False, sort_keys=True)}")
+        logger.info(f"AssetSnapshot scan completed: {len(observed)} items confirmed")
+        logger.debug(f"AssetSnapshot payload: {json.dumps(payload, ensure_ascii=False, sort_keys=True)}")
         return payload
 
     def run(self):
@@ -271,12 +273,14 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                             "displayUnitStep": max(1, int(Decimal(unit) / (10 ** decimals))) if unit and variable_name != "stamina" else None,
                             "rawText": text,
                         }
-                    logger.info(
+                    logger.info(f"AssetSnapshot top {variable_name}: {quantity}")
+                    logger.debug(
                         f"AssetSnapshot top resource={variable_name} raw={raw!r} "
                         f"quantity={quantity} roi={roi} attempt={attempt}"
                     )
                     break
-                logger.warning(
+                logger.warning(f"AssetSnapshot top {variable_name} unreadable (attempt {attempt + 1})")
+                logger.debug(
                     f"AssetSnapshot rejected top resource={variable_name} "
                     f"raw={raw!r} roi={roi} attempt={attempt}"
                 )
@@ -314,7 +318,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                     continue
                 raw = owned_rule.ocr(self.device.image)
                 quantity = parse_stamina_detail_quantity(raw)
-                logger.info(f"AssetSnapshot {variable_name} detail raw={raw!r} quantity={quantity}")
+                logger.info(f"AssetSnapshot {variable_name} detail: {quantity}")
                 if quantity is not None and quantity == previous:
                     if hasattr(self, "observation_metadata"):
                         self.observation_metadata[variable_name] = {
@@ -390,7 +394,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         historical_missing = (historical_materials or set()) - self.quantity_observations.keys()
         targets = pending | historical_missing
         if targets:
-            logger.info(f"资产快照：列表扫描结束，复查 {len(targets)} 项未确认材料")
+            logger.info(f"AssetSnapshot rechecking {len(targets)} unconfirmed items")
             self._finish_material_details(values, page_index, boundary, pending, targets, page_details)
         return True
 
@@ -572,7 +576,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                 detail = self._read_auspicious_demon_detail(candidate.area)
             if detail is None:
                 self.read_failures.update({variable} if variable and counts[variable] == 1 else DEMON_VARIABLES)
-                logger.warning(f"青吉鬼详情未确认：格子 ({candidate.area[0]}, {candidate.area[1]})")
+                logger.warning(f"AssetSnapshot demon detail unconfirmed at {candidate.area[:2]}")
                 quantity, method = None, "detail"
             else:
                 variable, quantity = detail
@@ -587,7 +591,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             }
             self.match_score_records.append(record)
             if quantity is not None and method == "detail":
-                logger.info(f"资产快照：{DEMON_NAMES[variable]} {quantity} 个（详情）")
+                logger.info(f"AssetSnapshot demon {variable}: {quantity}")
 
     def _read_auspicious_demon_detail(self, area: tuple[int, int, int, int]) -> tuple[str, int] | None:
         return self._read_inventory_detail(
@@ -724,7 +728,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             record.update(variable_name=variable, quantity=quantity, status="accepted",
                           method="cache" if cached else "detail")
             if not cached:
-                logger.info(f"AssetSnapshot ticket={variable} quantity={quantity} source=detail")
+                logger.info(f"AssetSnapshot ticket {variable}: {quantity}")
 
     def _read_skin_ticket_detail(
         self,
@@ -858,10 +862,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             except Exception as error:
                 if not self._is_unknown_frame_error(error) or attempt:
                     raise
-                logger.warning(
-                    f"AssetSnapshot image frame expired during {purpose}; "
-                    "refreshing screenshot and retrying"
-                )
+                logger.warning(f"AssetSnapshot frame retry: {purpose}")
                 self._refresh_inventory_frame(f"retry {purpose}")
         raise RuntimeError(f"AssetSnapshot frame retry unexpectedly exhausted: {purpose}")
 
@@ -880,7 +881,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             y_offset=self.swipe_random_y_offset,
         )
         before_signature = self._material_grid_signature()
-        logger.info(
+        logger.debug(
             f"AssetSnapshot material swipe start: {p1} -> {p2}, "
             f"before_signature={before_signature}"
         )
@@ -890,7 +891,6 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             duration=self.swipe_duration,
             control_name=control_name,
         )
-        logger.info("AssetSnapshot material swipe dispatched")
 
     def _wait_for_material_grid_stability(self) -> None:
         time.sleep(0.6)
@@ -906,7 +906,7 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             if signature == previous_signature:
                 stable_frames += 1
                 if stable_frames >= self.settle_stable_frames:
-                    logger.info(
+                    logger.debug(
                         "AssetSnapshot material swipe settled: "
                         f"changed={before_signature != signature}, "
                         f"before_signature={before_signature}, after_signature={signature}"

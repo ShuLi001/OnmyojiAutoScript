@@ -424,6 +424,15 @@ SENTENCES: dict[str, str] = {
     "thousand things is disabled": "Thousand Things 已禁用",
     "here are the available devices, copy to {} to use it or set": "以下是可用设备，复制到 {1} 以使用，或设置",
     "here are the available packages in device \"{}\", copy to": "以下是设备 {1} 中的可用应用包，复制到",
+    # ---------- asset snapshot ----------
+    "assetsnapshot scan completed: {} items confirmed": "资产快照：扫描结束，本轮确认{}项",
+    "assetsnapshot rechecking {} unconfirmed items": "资产快照：开始复查{}项未确认材料",
+    "assetsnapshot grid stopped at end of list": "资产快照：已到达列表末尾",
+    "assetsnapshot material grid reached bottom marker": "资产快照：已滚动到材料列表底部",
+    "assetsnapshot material grid reached top marker": "资产快照：已滚动到材料列表顶部",
+    "assetsnapshot swipe made no progress inside list": "资产快照：滑动后列表未移动",
+    "assetsnapshot material swipe dispatched": "资产快照：已执行材料列表滑动",
+    "assetsnapshot demon detail unconfirmed at ({}, {})": "资产快照：未能确认青吉鬼详情，格子位置({1}, {2})",
 }
 
 
@@ -1344,6 +1353,37 @@ _REALM_OCR_NAMES = {
     "card_all_time": "结界卡剩余时间",
 }
 
+_ASSET_OCR_NAMES = {
+    "gold": "金币",
+    "stamina": "体力",
+    "jade": "勾玉",
+    "soul_jade": "魂玉",
+    "stamina_detail_name": "体力详情标题",
+    "stamina_detail_owned": "体力详情持有量",
+    "jade_detail_name": "勾玉详情标题",
+    "jade_detail_owned": "勾玉详情持有量",
+    "ticket_detail_name": "皮肤券详情名称",
+    "ticket_detail_quantity": "皮肤券详情持有量",
+    "detail_hold": "材料详情持有量",
+}
+_ASSET_OCR_QUANTITY_RE = re.compile(r"quantity_(\d+)_(\d+)_(raw|filtered)")
+_ASSET_OCR_RETRY_RE = re.compile(r"(gold|stamina|jade|soul_jade)_retry_(\d+)")
+
+
+def _ocr_display_name(name: str) -> str | None:
+    key = name.lower()
+    if not key.startswith("asset_snapshot_"):
+        return _REALM_OCR_NAMES.get(key)
+    key = key.removeprefix("asset_snapshot_")
+    if matched := _ASSET_OCR_QUANTITY_RE.fullmatch(key):
+        x, y, method = matched.groups()
+        label = "原图" if method == "raw" else "白色筛选"
+        return f"材料数量（{label}，{x}, {y}）"
+    if matched := _ASSET_OCR_RETRY_RE.fullmatch(key):
+        resource, attempt = matched.groups()
+        return f"{_ASSET_OCR_NAMES[resource]}（重试{attempt}）"
+    return _ASSET_OCR_NAMES.get(key)
+
 # 未收录的动作标签保留原名。
 _CLICK_ACTION_NAMES = {
     "wq_wq_seal": "悬赏封印入口",
@@ -1374,6 +1414,12 @@ _CLICK_ACTION_NAMES = {
     **{f"invite_wq_invite_{i}_purple": f"协作邀请{i}（紫色）" for i in range(1, 4)},
     **{f"invite_wq_friend_{i}": f"选择好友{i}" for i in range(1, 6)},
     "safe_random_click": "安全区域",
+    "asset_snapshot_composite": "切换至综合",
+    "asset_snapshot_recent": "切换至最近",
+    "asset_snapshot_stamina_detail": "查看体力详情",
+    "asset_snapshot_stamina_detail_close": "关闭体力详情",
+    "asset_snapshot_jade_detail": "查看勾玉详情",
+    "asset_snapshot_jade_detail_close": "关闭勾玉详情",
     "asset_snapshot_demon_detail": "查看青吉鬼详情",
     "asset_snapshot_material_detail": "查看材料详情",
     "asset_snapshot_ticket_detail": "查看皮肤券详情",
@@ -1460,11 +1506,105 @@ _PAGE_GOTO_RE = re.compile(r"<<< UI GOTO (.+) >>>")
 _PAGE_PATH_RE = re.compile(r"Current page: (.+)\. Following path:")
 _PAGE_SWITCH_RE = re.compile(r"Page switch: (.+?) -> (.+)")
 _PAGE_ARRIVED_RE = re.compile(r"(\[\d+(?:\.\d+)?s\] )?Page arrived (.+)")
+_ASSET_OCR_NOTICE_RE = re.compile(r"\[(ASSET_SNAPSHOT_[A-Z0-9_]+)\]: (No text detected(?: in ROI)?|Invalid quantity: .+)")
+_ASSET_OCR_LOW_SCORE_RE = re.compile(
+    r'\[(ASSET_SNAPSHOT_[A-Z0-9_]+)\] Score (\d+\.\d+) is low, but result "(.*)" contains a digit\. Accepting it\.'
+)
+_ASSET_CATEGORY_NAMES = {"composite": "综合", "recent": "最近"}
+_ASSET_SOURCE_NAMES = {"grid": "格子", "detail": "详情"}
+_ASSET_BOUNDARY_NAMES = {"top": "顶部", "middle": "中间", "bottom": "底部", "unknown": "未确认"}
+_ASSET_SCAN_PURPOSES = {
+    "material recheck": "复查材料", "material detail": "读取材料详情", "scroll boundary": "检查滚动位置",
+    "skin ticket candidates": "查找皮肤券", "skin ticket body": "匹配皮肤券图标",
+    "skin ticket alternatives": "区分皮肤券类型", "SP ticket badge": "匹配SP皮肤券标记",
+    "skin ticket detail": "读取皮肤券详情", "stamina detail": "读取体力详情", "jade detail": "读取勾玉详情",
+    "close stamina detail": "关闭体力详情", "close jade detail": "关闭勾玉详情",
+}
+_ASSET_LOG_RULES = tuple((re.compile(pattern), translation) for pattern, translation in (
+    (r"selected category: (?P<category>\w+)", "资产快照：已选择「{category}」分组"),
+    (r"saved (?P<category>\w+) snapshot: (?P<path>.+)", "资产快照：已保存「{category}」快照，文件：{path}"),
+    (r"saved (?P<category>\w+) snapshot:?", "资产快照：已保存「{category}」快照"),
+    (r"snapshot path: (?P<path>.+)", "资产快照文件：{path}"),
+    (r"top (?P<name>\w+): (?P<quantity>\d+)", "资产快照：{name} {quantity}"),
+    (r"top (?P<name>\w+) unreadable \(attempt (?P<attempt>\d+)\)", "资产快照：第{attempt}次未能读取{name}"),
+    (r"top resource=(?P<name>\w+) raw=(?P<raw>.*?) quantity=(?P<quantity>\d+)(?: roi=.*)?",
+     "资产快照：{name} {quantity}（OCR原文：{raw}）"),
+    (r"rejected top resource=(?P<name>\w+) raw=(?P<raw>.*?)(?: roi=.*)?",
+     "资产快照：未能确认{name}（OCR原文：{raw}）"),
+    (r"(?P<name>stamina|jade) detail: (?P<quantity>\d+)", "资产快照：{name}详情读数 {quantity}"),
+    (r"(?P<name>stamina|jade) detail: None", "资产快照：未能读到{name}详情数量"),
+    (r"(?P<name>stamina|jade) detail raw=(?P<raw>.*?) quantity=(?P<quantity>\d+)",
+     "资产快照：{name}详情读数 {quantity}（OCR原文：{raw}）"),
+    (r"(?:demon|ticket) (?P<name>\w+): (?P<quantity>\d+)", "资产快照：{name} {quantity}（详情）"),
+    (r"(?:material|ticket)=(?P<name>\w+) quantity=(?P<quantity>\d+) source=(?P<source>\w+)(?: area=(?P<area>.*))?",
+     "资产快照：{name} {quantity}（{source}）{area}"),
+    (r"scan reached max_scan_swipes=(?P<count>\d+)", "资产快照：已达到扫描滑动上限（{count}次）"),
+    (r"material swipe start: (?P<start>\([^)]+\)) -> (?P<end>\([^)]+\))(?:,.*)?",
+     "资产快照：材料列表滑动 {start} → {end}"),
+    (r"material swipe settled: changed=(?P<changed>True|False)(?:,.*)?", "资产快照：材料列表已稳定（稳定前有变化：{changed}）"),
+    (r"scroll boundary: (?P<boundary>\w+) top=\w+ bottom=\w+", "资产快照：当前滚动位置：{boundary}"),
+    (r"refreshed image frame for (?P<purpose>.+): frame_id=(?P<frame>.*)", "资产快照：已为「{purpose}」刷新截图，帧编号：{frame}"),
+    (r"frame retry: (?P<purpose>.+)", "资产快照：「{purpose}」时截图已过期，重新截图并重试"),
+    (r"image frame expired during (?P<purpose>.+);.*", "资产快照：「{purpose}」时截图已过期，重新截图并重试"),
+    (r"history unreadable, use full scan: (?P<path>.*)", "资产快照：无法读取历史记录，改用综合扫描：{path}"),
+    (r"history invalid, use full scan: (?P<path>.*)", "资产快照：历史记录无效，改用综合扫描：{path}"),
+    (r"compatibility export retry failed: (?P<error>.*)", "资产快照：重试导出兼容文件失败：{error}"),
+    (r"JSON export failed; committed history is safe: (?P<error>.*)", "资产快照：JSON导出失败，历史记录已保存：{error}"),
+    (r"payload: (?P<data>.*)", "资产快照数据：{data}"),
+    (r"recheck missing historical materials: \[(?P<names>[^\]]*)\]?", "资产快照：复查历史漏项：{names}"),
+))
+
+
+@lru_cache(maxsize=1)
+def _asset_material_names() -> dict[str, str]:
+    path = Path(__file__).resolve().parents[1] / "tasks" / "AssetSnapshot" / "asset_snapshot_variables.json"
+    try:
+        names = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {code: name.replace("_", "·") for name, code in names.items()}
+
+
+def _asset_scan_purpose(purpose: str) -> str:
+    if purpose.startswith("retry "):
+        return f"重试：{_asset_scan_purpose(purpose.removeprefix('retry '))}"
+    if matched := re.fullmatch(r"(?:material|scan) page (\d+)", purpose):
+        return f"扫描第{matched[1]}屏材料"
+    if matched := re.fullmatch(r"top resource (\w+) retry (\d+)", purpose):
+        return f"重试读取{_ASSET_OCR_NAMES.get(matched[1], matched[1])}（第{matched[2]}次）"
+    return _ASSET_SCAN_PURPOSES.get(purpose, purpose)
+
+
+def _translate_asset_snapshot(line: str) -> str | None:
+    if not line.startswith("AssetSnapshot "):
+        return None
+    for pattern, translation in _ASSET_LOG_RULES:
+        if not (matched := pattern.fullmatch(line.removeprefix("AssetSnapshot "))):
+            continue
+        fields = matched.groupdict()
+        for field, labels in (("category", _ASSET_CATEGORY_NAMES), ("source", _ASSET_SOURCE_NAMES),
+                              ("boundary", _ASSET_BOUNDARY_NAMES), ("changed", {"True": "是", "False": "否"})):
+            if field in fields:
+                fields[field] = labels.get(fields[field], fields[field])
+        if "name" in fields:
+            name = fields["name"]
+            fields["name"] = _ASSET_OCR_NAMES.get(name) or _asset_material_names().get(name, name)
+        if "names" in fields:
+            names = _asset_material_names()
+            fields["names"] = "、".join(names.get(name, name) for name in re.findall(_TASK_ID, fields["names"]))
+        if "area" in fields:
+            fields["area"] = f"，格子区域：{fields['area']}" if fields["area"] else ""
+        if "purpose" in fields:
+            fields["purpose"] = _asset_scan_purpose(fields["purpose"])
+        return translation.format_map(fields)
+    return None
 
 
 def _translate_display_fields(message: str) -> str | None:
     """处理有明确字段边界的日志，避免把同名玩家、文件或识别结果当作标签。"""
     line = message.strip()
+    if translated := _translate_asset_snapshot(line):
+        return translated
     if matched := _TASK_LIST_RE.fullmatch(line):
         kind, items = matched.groups()
         names = [_task_display_name(name) for name in re.findall(_TASK_ID, items or "")]
@@ -1500,11 +1640,20 @@ def _translate_display_fields(message: str) -> str | None:
         return f"寄养剩余时间：{line.removeprefix('Utilize remaining time: ')}"
     if matched := _OCR_RESULT_RE.fullmatch(line):
         name, duration, raw = matched.groups()
-        if label := _REALM_OCR_NAMES.get(name.lower()):
+        if label := _ocr_display_name(name):
             return f"[{label} {duration}] {raw}"
+    if matched := _ASSET_OCR_NOTICE_RE.fullmatch(line):
+        name, notice = matched.groups()
+        if label := _ocr_display_name(name):
+            detail = f"数量无效：{notice.split(': ', 1)[1]}" if notice.startswith("Invalid quantity:") else "未识别到文字"
+            return f"[{label}] {detail}"
+    if matched := _ASSET_OCR_LOW_SCORE_RE.fullmatch(line):
+        name, score, raw = matched.groups()
+        if label := _ocr_display_name(name):
+            return f'[{label}] 识别分数偏低（{score}），结果 "{raw}" 含数字，予以保留'
     if matched := _OCR_MATCH_RE.fullmatch(line):
         name, match_result = matched.groups()
-        if (label := _REALM_OCR_NAMES.get(name.lower())) or match_result == "None":
+        if (label := _ocr_display_name(name)) or match_result == "None":
             if match_result == "None":
                 result = "未找到匹配项"
             elif match_result.startswith("["):
