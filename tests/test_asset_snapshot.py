@@ -41,16 +41,16 @@ class AssetSnapshotContractTest(unittest.TestCase):
     def test_material_quantity_roi_is_derived_from_match_area(self):
         self.assertEqual(
             quantity_roi_from_match((280, 198, 80, 80)),
-            (313, 255, 55, 31),
+            (298, 255, 70, 31),
         )
 
-    def test_gemini_card_template_quantity_roi_uses_card_origin(self):
+    def test_card_template_quantity_roi_uses_card_origin(self):
         self.assertEqual(
             quantity_roi_from_card_match((271, 188, *MATERIAL_MATCH_TEMPLATE_SIZE)),
-            (311, 252, 55, 31),
+            (296, 252, 70, 31),
         )
 
-    def test_material_rules_use_gemini_templates_and_high_threshold(self):
+    def test_material_rules_use_inventory_templates_and_default_threshold(self):
         self.assertEqual(len(AssetSnapshotAssets.MATERIAL_RULES), 69)
         self.assertEqual(len(set(AssetSnapshotAssets.MATERIAL_RULE_TO_VARIABLE.values())), 67)
         self.assertNotIn("limited_mystic_talisman", AssetSnapshotAssets.MATERIAL_RULE_TO_VARIABLE.values())
@@ -60,7 +60,7 @@ class AssetSnapshotContractTest(unittest.TestCase):
                 for rule in AssetSnapshotAssets.MATERIAL_RULES
             )
         )
-        self.assertTrue(all(rule.threshold >= 0.95 for rule in AssetSnapshotAssets.MATERIAL_RULES))
+        self.assertTrue(all(rule.threshold == 0.90 for rule in AssetSnapshotAssets.MATERIAL_RULES))
         self.assertTrue(all(rule.roi_front[2:] == list(MATERIAL_MATCH_TEMPLATE_SIZE) for rule in AssetSnapshotAssets.MATERIAL_RULES))
 
     def test_selected_mystic_template_updates_the_same_material(self):
@@ -71,8 +71,9 @@ class AssetSnapshotContractTest(unittest.TestCase):
             self.assertEqual(rule.image.shape[:2], (70, 95))
 
     def test_match_score_status_only_accepts_scores_at_or_above_threshold(self):
-        self.assertEqual(classify_match_score(0.95), "accepted")
-        self.assertEqual(classify_match_score(0.9499), "below_threshold")
+        self.assertEqual(classify_match_score(0.90), "accepted")
+        self.assertEqual(classify_match_score(0.8999), "below_threshold")
+        self.assertEqual(classify_match_score(0.94, threshold=0.95), "below_threshold")
 
     def test_normalize_quantity_supports_game_units_and_ocr_noise(self):
         self.assertEqual(normalize_quantity("6506万"), 65060000)

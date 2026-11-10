@@ -34,9 +34,7 @@ def make_task():
     task.screenshot = Mock()
     task.appear = Mock(return_value=True)
     task.match_score_records = []
-    task.quantity_match_scores = {}
     task.quantity_observations = {}
-    task.ticket_detail_cache = {}
     task.material_match_threshold = 0.90
     return task
 
@@ -96,28 +94,31 @@ class SkinTicketMatchingTest(unittest.TestCase):
         task.device.image = read_page(5)
         task._find_material_matches = Mock(return_value=[])
         task._read_material_quantity = Mock(return_value=333)
-        task._read_skin_ticket_detail = Mock(return_value=("sp_skin_ticket", 6))
+        task._read_skin_ticket_detail = Mock(side_effect=[("sp_skin_ticket", 6), ("skin_ticket", 333)])
         task._scroll_boundary_state = Mock(return_value="bottom")
         values = {"skin_ticket": 0, "sp_skin_ticket": 0}
         with patch("tasks.AssetSnapshot.script_task.get_image_client", return_value=self.client):
             self.assertTrue(task._scan_material_pages(values))
         self.assertEqual(values, {"skin_ticket": 333, "sp_skin_ticket": 6})
+        task._read_material_quantity.assert_not_called()
 
 
 class SkinTicketReadingTest(unittest.TestCase):
-    def test_sp_uses_detail_quantity_and_caches_it_for_overlapping_pages(self):
-        task = make_task()
-        task._find_skin_ticket_candidates = Mock(return_value=[
-            SkinTicketCandidate((373, 275, 95, 70), .99, .91, .99, .95, "sp_skin_ticket"),
-        ])
-        task._read_skin_ticket_detail = Mock(return_value=("sp_skin_ticket", 1234))
-        task._read_material_quantity = Mock(return_value=156)
-        values = {"sp_skin_ticket": 0}
-        task._scan_skin_tickets(values, 4)
-        task._scan_skin_tickets(values, 5)
-        self.assertEqual(values["sp_skin_ticket"], 1234)
-        task._read_material_quantity.assert_not_called()
-        task._read_skin_ticket_detail.assert_called_once()
+    def test_each_ticket_uses_detail_quantity_and_caches_it_for_overlapping_pages(self):
+        for variable in ("skin_ticket", "sp_skin_ticket"):
+            with self.subTest(variable=variable):
+                task = make_task()
+                task._find_skin_ticket_candidates = Mock(return_value=[
+                    SkinTicketCandidate((373, 275, 95, 70), .99, .91, .99, .95, variable),
+                ])
+                task._read_skin_ticket_detail = Mock(return_value=(variable, 1234))
+                task._read_material_quantity = Mock(return_value=156)
+                values = {variable: 0}
+                task._scan_skin_tickets(values, 4)
+                task._scan_skin_tickets(values, 5)
+                self.assertEqual(values[variable], 1234)
+                task._read_material_quantity.assert_not_called()
+                task._read_skin_ticket_detail.assert_called_once()
 
     def test_uncertain_type_uses_name_and_quantity_from_details(self):
         task = make_task()

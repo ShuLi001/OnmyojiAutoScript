@@ -107,16 +107,15 @@ class SnapshotWorkflowTest(unittest.TestCase):
             self.assertIsNone(task._read_material_quantity((271, 600, 95, 70)))
             ocr.assert_not_called()
 
-    def test_repeated_weaker_read_does_not_overwrite_better_quantity(self):
+    def test_overlapping_page_reuses_confirmed_quantity_even_at_higher_match_score(self):
         task = self.task()
         task.max_scan_swipes = 1
         task.quantity_observations = {}
-        task.quantity_match_scores = {}
         rule = object()
         task.MATERIAL_RULE_TO_VARIABLE = {id(rule): "seal"}
         task._find_material_matches = Mock(side_effect=[
-            [(rule, .99, (271, 230, 95, 70))],
-            [(rule, .96, (271, 250, 95, 70))],
+            [(rule, .96, (271, 230, 95, 70))],
+            [(rule, .99, (271, 250, 95, 70))],
         ])
         task._read_material_quantity = Mock(side_effect=[3919, 319])
         task._material_grid_signature = Mock(side_effect=[1, 2])
@@ -126,12 +125,12 @@ class SnapshotWorkflowTest(unittest.TestCase):
         values = {"seal": 0}
         self.assertTrue(task._scan_material_pages(values))
         self.assertEqual(values["seal"], 3919)
+        task._read_material_quantity.assert_called_once()
 
     def test_failed_swipe_in_middle_is_not_a_completed_scan(self):
         task = self.task()
         task.max_scan_swipes = 1
         task.quantity_observations = {}
-        task.quantity_match_scores = {}
         task._find_material_matches = Mock(return_value=[])
         task._material_grid_signature = Mock(return_value=1)
         task._scroll_boundary_state = Mock(return_value="middle")
@@ -176,7 +175,7 @@ class SnapshotWorkflowTest(unittest.TestCase):
                     self.assertFalse(ocr.return_value.filter_white)
 
             task._read_material_quantity((271, 291, 95, 70), variable_name="myriad_disc")
-            self.assertEqual(ocr.call_args.kwargs["roi"], (311, 355, 55, 31))
+            self.assertEqual(ocr.call_args.kwargs["roi"], (296, 355, 70, 31))
 
     def test_task_registered_in_default_config_menu_and_scheduler(self):
         from module.config.config_model import ConfigModel
