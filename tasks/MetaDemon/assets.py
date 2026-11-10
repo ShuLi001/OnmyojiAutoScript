@@ -11,6 +11,10 @@ class MetaDemonAssets:
 
 
 	# Click Rule Assets
+	# 点击整条阵容栏展开快捷阵容
+	C_MD_LOADOUT_OPEN = RuleClick(roi_front=(1065,427,194,42), roi_back=(1065,427,194,42), name="md_loadout_open")
+	# 点击快捷阵容面板外的背景收起面板
+	C_MD_LOADOUT_DISMISS = RuleClick(roi_front=(1081,345,85,36), roi_back=(1081,345,85,36), name="md_loadout_dismiss")
 	# 点击活动首页祸王降临入口进入超鬼王
 	C_MD_ENTER_BOSS = RuleClick(roi_front=(886,28,150,238), roi_back=(886,28,150,238), name="md_enter_boss")
 	# 点击全部队列按钮内部
@@ -28,6 +32,14 @@ class MetaDemonAssets:
 
 
 	# Image Rule Assets
+	# 超鬼王阵容栏齿轮
+	I_MD_LOADOUT_GEAR = RuleImage(roi_front=(1220,430,38,37), roi_back=(1208,418,62,60), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_gear.png")
+	# 超鬼王快捷阵容出战锚点
+	I_MD_LOADOUT_FIGHT = RuleImage(roi_front=(758,556,118,43), roi_back=(0,0,1280,720), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_fight.png")
+	# 预设人数不足时的面板锚点
+	I_MD_LOADOUT_INCOMPLETE = RuleImage(roi_front=(663,573,318,20), roi_back=(0,0,1280,720), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_incomplete.png")
+	# 出战时自动装配御魂的确定按钮
+	I_MD_LOADOUT_CONFIRM = RuleImage(roi_front=(664,407,180,65), roi_back=(638,386,232,107), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_confirm.png")
 	# 门票掉落弹窗今日已获得裂变之眼文字
 	I_MD_TICKET_DROP_POPUP = RuleImage(roi_front=(524,346,230,32), roi_back=(504,330,270,64), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_ticket_drop_popup.png")
 	# 挑战鬼王 
@@ -40,8 +52,8 @@ class MetaDemonAssets:
 	I_MD_SYNTHESIZE = RuleImage(roi_front=(0,0,100,100), roi_back=(0,0,100,100), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_synthesize.png")
 	# 鬼王页面标志 
 	I_CHECK_BOSS_PAGE = RuleImage(roi_front=(1064,19,43,40), roi_back=(1054,7,62,63), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_check_boss_page.png")
-	# 活动首页入口右下侧的超鬼王三字
-	I_MD_CHECK_MAIN_PAGE = RuleImage(roi_front=(992,182,26,72), roi_back=(982,172,48,92), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_check_main_page.png")
+	# 活动首页入口的降临二字
+	I_MD_CHECK_MAIN_PAGE = RuleImage(roi_front=(943,151,44,119), roi_back=(929,137,72,147), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_check_main_page.png")
 	# 领取昨日奖励 
 	I_MD_GET_YESTERDAY_REWARD = RuleImage(roi_front=(547,571,183,56), roi_back=(471,523,327,163), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_get_yesterday_reward.png")
 	# 一星鬼王召唤票 
@@ -109,6 +121,8 @@ class MetaDemonAssets:
 	O_MD_DAILY_TICKET_REWARD = RuleOcr(roi=(1138,6,100,36), area=(1138,6,100,36), mode="DigitCounter", method="Default", keyword="", name="md_daily_ticket_reward")
 	# 探索页超鬼王当日门票获取进度
 	O_MD_DAILY_TICKET_EXPLORATION = RuleOcr(roi=(936,14,100,36), area=(936,14,100,36), mode="DigitCounter", method="Default", keyword="", name="md_daily_ticket_exploration")
+	# 活动期间探索地图顶部的结界挑战券库存
+	O_MD_REALM_RAID_TICKETS = RuleOcr(roi=(548,12,84,36), area=(548,12,84,36), mode="DigitCounter", method="Default", keyword="", name="md_realm_raid_tickets")
 	# 疲劳度 
 	O_MD_FATIGUE = RuleOcr(roi=(1109,22,114,34), area=(1106,17,124,41), mode="DigitCounter", method="Default", keyword="", name="md_fatigue")
 	# 好友列表 

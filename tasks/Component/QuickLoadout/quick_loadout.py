@@ -323,12 +323,14 @@ class QuickLoadout(BaseTask, SwitchSoulAssets):
                 return panel_y + self.PRESET_FIRST_Y + slot * self.PRESET_ROW_HEIGHT
         return None
 
+    def _group_click_point(self, layout: QuickLoadoutLayout, y: int) -> tuple[int, int]:
+        return layout.panel[0] + self.GROUP_CLICK_X, y
+
     def _select_group(self, layout: QuickLoadoutLayout, config: QuickLoadoutConfig) -> bool:
         self._rewind_list(layout.group_ocr, layout.group_swipe_to_top, self.MAX_GROUP_SWIPES)
-        panel_x, panel_y, _, _ = layout.panel
         if config.mode == QuickLoadoutMode.NUMBER:
-            y = panel_y + self.GROUP_FIRST_Y + (config.group_number - 1) * self.GROUP_ROW_HEIGHT
-            self.device.click(panel_x + self.GROUP_CLICK_X, y, control_name='QUICK_LOADOUT_GROUP')
+            y = layout.panel[1] + self.GROUP_FIRST_Y + (config.group_number - 1) * self.GROUP_ROW_HEIGHT
+            self.device.click(*self._group_click_point(layout, y), control_name='QUICK_LOADOUT_GROUP')
             sleep(0.6)
             return True
 
@@ -340,7 +342,7 @@ class QuickLoadout(BaseTask, SwitchSoulAssets):
             current = tuple(result.ocr_text for result in results)
             y, score = self._find_name_y(layout.group_ocr, config.group_name, results)
             if y is not None and score >= 0.55:
-                self.device.click(panel_x + self.GROUP_CLICK_X, y, control_name='QUICK_LOADOUT_GROUP_OCR')
+                self.device.click(*self._group_click_point(layout, y), control_name='QUICK_LOADOUT_GROUP_OCR')
                 sleep(0.6)
                 return True
             stable_count = stable_count + 1 if current and current == previous else 0

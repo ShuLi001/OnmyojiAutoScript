@@ -2,10 +2,8 @@
 # @author runhey
 # github https://github.com/runhey
 from datetime import timedelta, time
-from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
-
 from tasks.Component.config_base import ConfigBase, TimeDelta, Time, dynamic_hide
-from pydantic import Field
+from pydantic import Field, model_validator
 from enum import Enum, IntEnum
 from tasks.Component.config_scheduler import Scheduler
 
@@ -18,6 +16,12 @@ class BossType(IntEnum):
     FIVE_STARS = 5
     SIX_STARS = 6
     MONEY = 7
+
+    @property
+    def lineup_key(self) -> str:
+        if BossType.ONE_STAR <= self <= BossType.FOUR_STARS:
+            return 'one_to_four_stars'
+        return self.name.lower()
 
 
 class MetaDemonConfig(ConfigBase):
@@ -63,50 +67,33 @@ class MetaDemonConfig(ConfigBase):
 
 
 class MetaDemonSwitchSoulConfig(ConfigBase):
-    enable: bool = Field(default=False, description='是否启用自动切换御魂,清空则不会切换对应御魂\n若是数字,则以编号方式切换御魂(组号,队伍号),组1-7,队伍1-4\n若非数字,则以ocr方式切换御魂(组名,队伍名)')
-    switch_once: bool = Field(default=False, description='启用该项会一次性切换所有需要攻击的鬼王御魂(建议全部独立御魂再启用), 否则当鬼王级别变更时会自动切换对应级别御魂')
-    one_star: str = Field(default='', description='一星鬼王切换御魂配置')
-    enable_one_star_preset: bool = Field(default=False, description='是否战斗内切换一星鬼王预设,仅限数字切换御魂可用,否则无效,下面同理')
-    two_stars: str = Field(default='', description='二星鬼王切换御魂配置')
-    enable_two_stars_preset: bool = Field(default=False, description='是否战斗内切换二星鬼王预设')
-    three_stars: str = Field(default='', description='三星鬼王切换御魂配置')
-    enable_three_stars_preset: bool = Field(default=False, description='是否战斗内切换三星鬼王预设')
-    four_stars: str = Field(default='', description='四星鬼王切换御魂配置')
-    enable_four_stars_preset: bool = Field(default=False, description='是否战斗内切换四星鬼王预设')
-    five_stars: str = Field(default='', description='五星鬼王切换御魂配置')
-    enable_five_stars_preset: bool = Field(default=False, description='是否战斗内切换五星鬼王预设')
-    six_stars: str = Field(default='', description='六星鬼王切换御魂配置')
-    enable_six_stars_preset: bool = Field(default=False, description='是否战斗内切换六星鬼王预设')
-    # money: str = Field(default='', description='氪金鬼王切换御魂配置')
-    # enable_money_preset: bool = Field(default=False, description='是否切换氪金鬼王预设')
+    enable: bool = Field(default=False, description='在超鬼王活动页同时切换阵容和御魂。填写组号,队伍号（如1,2）或分组名称,队伍名称；留空则沿用当前阵容')
+    one_to_four_stars: str = Field(default='', description='一至四星鬼王共用的御魂及阵容预设配置')
+    five_stars: str = Field(default='', description='五星鬼王的御魂及阵容预设配置')
+    six_stars: str = Field(default='', description='六星鬼王的御魂及阵容预设配置')
 
-    def get_switch_by_enum(self, boss_type: BossType) -> tuple[str, tuple[str | int, str | int]]:
-        """根据枚举获取对应的 切换类型, (group,team)"""
-        return self.get_switch_by_name(boss_type.name.lower())
+    @model_validator(mode='before')
+    @classmethod
+    def migrate_low_star_lineup(cls, data):
+        if not isinstance(data, dict) or 'one_to_four_stars' in data:
+            return data
+        for key in ('one_star', 'two_stars', 'three_stars', 'four_stars'):
+            value = data.get(key)
+            if isinstance(value, str) and value.strip():
+                return {**data, 'one_to_four_stars': value}
+        return data
 
-    def get_switch_by_name(self, switch_name: str) -> tuple[str, tuple[str | int, str | int]]:
-        """根据名称获取对应的御魂预设"""
-        group_team = getattr(self, switch_name, None)
-        if group_team is None or group_team.strip() == '' or ',' not in group_team or len(group_team.split(',')) != 2:
-            return None, (None, None)
-        group, team = group_team.split(',')
-        if group.isdigit() and team.isdigit():
-            return 'int', (int(group), int(team))
-        return 'str', (group, team)
-
-    def get_general_battle_conf(self, boss_type: BossType) -> GeneralBattleConfig:
-        """获取通用战斗配置"""
-        if boss_type is None:
-            return GeneralBattleConfig()
-        enable_preset = getattr(self, f'enable_{boss_type.name.lower()}_preset', False)
-        if not enable_preset:
-            return GeneralBattleConfig()
-        switch_type, (group, team) = self.get_switch_by_enum(boss_type)
-        if switch_type is None or switch_type == 'str':
-            return GeneralBattleConfig()
-        if switch_type == 'int':
-            return GeneralBattleConfig(lock_team_enable=False, preset_enable=True, preset_group=group, preset_team=team)
-        return GeneralBattleConfig()
+    def get_lineup(self, boss_type: BossType) -> tuple[int, int] | tuple[str, str] | None:
+        value = getattr(self, boss_type.lineup_key, '').strip()
+        if not value:
+            return None
+        parts = [part.strip() for part in value.replace('，', ',').split(',')]
+        if len(parts) != 2 or not all(parts):
+            raise ValueError('阵容须填写组号,队伍号或分组名称,队伍名称')
+        group, team = parts
+        if group.isdecimal() and team.isdecimal():
+            return int(group), int(team)
+        return group, team
 
 
 class TicketFarmSource(str, Enum):

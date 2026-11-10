@@ -1,5 +1,41 @@
 [
   {
+    "itemName": "md_loadout_gear",
+    "imageName": "md_loadout_gear.png",
+    "roiFront": "1220,430,38,37",
+    "roiBack": "1208,418,62,60",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "超鬼王阵容栏齿轮"
+  },
+  {
+    "itemName": "md_loadout_fight",
+    "imageName": "md_loadout_fight.png",
+    "roiFront": "758,556,118,43",
+    "roiBack": "0,0,1280,720",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "超鬼王快捷阵容出战锚点"
+  },
+  {
+    "itemName": "md_loadout_incomplete",
+    "imageName": "md_loadout_incomplete.png",
+    "roiFront": "663,573,318,20",
+    "roiBack": "0,0,1280,720",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "预设人数不足时的面板锚点"
+  },
+  {
+    "itemName": "md_loadout_confirm",
+    "imageName": "md_loadout_confirm.png",
+    "roiFront": "664,407,180,65",
+    "roiBack": "638,386,232,107",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "出战时自动装配御魂的确定按钮"
+  },
+  {
     "itemName": "md_ticket_drop_popup",
     "imageName": "md_ticket_drop_popup.png",
     "roiFront": "524,346,230,32",
@@ -56,11 +92,11 @@
   {
     "itemName": "md_check_main_page",
     "imageName": "md_md_check_main_page.png",
-    "roiFront": "992,182,26,72",
-    "roiBack": "982,172,48,92",
+    "roiFront": "943,151,44,119",
+    "roiBack": "929,137,72,147",
     "method": "Template matching",
     "threshold": 0.8,
-    "description": "活动首页入口右下侧的超鬼王三字"
+    "description": "活动首页入口的降临二字"
   },
   {
     "itemName": "md_get_yesterday_reward",

@@ -1,5 +1,17 @@
 [
   {
+    "itemName": "md_loadout_open",
+    "roiFront": "1065,427,194,42",
+    "roiBack": "1065,427,194,42",
+    "description": "点击整条阵容栏展开快捷阵容"
+  },
+  {
+    "itemName": "md_loadout_dismiss",
+    "roiFront": "1081,345,85,36",
+    "roiBack": "1081,345,85,36",
+    "description": "点击快捷阵容面板外的背景收起面板"
+  },
+  {
     "itemName": "md_enter_boss",
     "roiFront": "886,28,150,238",
     "roiBack": "886,28,150,238",

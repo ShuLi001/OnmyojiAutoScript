@@ -1062,19 +1062,9 @@
     },
     "switch_soul": {
       "enable": false,
-      "switch_once": false,
-      "one_star": "",
-      "enable_one_star_preset": false,
-      "two_stars": "",
-      "enable_two_stars_preset": false,
-      "three_stars": "",
-      "enable_three_stars_preset": false,
-      "four_stars": "",
-      "enable_four_stars_preset": false,
+      "one_to_four_stars": "",
       "five_stars": "",
-      "enable_five_stars_preset": false,
-      "six_stars": "",
-      "enable_six_stars_preset": false
+      "six_stars": ""
     }
   },
   "frog_boss": {
