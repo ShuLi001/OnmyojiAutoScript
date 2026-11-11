@@ -2,6 +2,7 @@
 
 import importlib
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timedelta, time
 from typing import Callable, NamedTuple
 
@@ -14,6 +15,12 @@ from tasks.MetaDemon.assets import MetaDemonAssets
 
 
 _REALM_RAID_TICKET_CAP = 30
+_REWARD_READ_MISS_LIMIT = 3
+
+
+@dataclass
+class _RewardReadStreak:
+    misses: int = 0
 
 
 class _RealmRaidNeeded(NamedTuple):
@@ -43,6 +50,7 @@ class _TicketFarmTask:
     ticket_farm_return_to_exploration = False
     ticket_farm_continuous = False
     ticket_round_progress = None
+    ticket_reward_read_streak: _RewardReadStreak
 
     def goto_page(self, destination, *args, **kwargs):
         if self.ticket_farm_return_to_exploration and destination.key == page_main.key:
@@ -59,11 +67,10 @@ class _TicketFarmTask:
     def _handle_reward(self, context, config):
         is_ticket_popup = self.appear(MetaDemonAssets.I_MD_TICKET_DROP_POPUP)
         # 必须先读取当前奖励帧，再交给原任务关闭奖励/处理队友邀请。
-        if self.ticket_progress_callback is not None:
+        if self.ticket_farm_continuous:
             current, _, total = MetaDemonAssets.O_MD_DAILY_TICKET_REWARD.ocr_digit_counter(self.device.image)
             if total > 0 and 0 <= current <= total:
                 self.ticket_round_progress = (current, total)
-                self.ticket_progress_callback((current, total))
         if is_ticket_popup:
             self.click(random_click(), interval=0.8)
             # 弹窗关闭后重新截图，再处理底层奖励页，避免沿用弹窗这一帧。
@@ -81,14 +88,24 @@ class _TicketFarmTask:
             self.ticket_farm_failed = True
         if self.ticket_farm_continuous:
             progress = self.ticket_round_progress
-            if not result or progress is None:
+            streak = self.ticket_reward_read_streak
+            if not result:
+                logger.warning('超鬼王刷票战斗失败，停止当前副本刷票')
+            elif progress is None:
+                streak.misses += 1
+                if streak.misses < _REWARD_READ_MISS_LIMIT:
+                    logger.warning(f'超鬼王连续 {streak.misses}/{_REWARD_READ_MISS_LIMIT} 场未识别门票，继续当前副本')
+                    return result
                 self.ticket_farm_failed = True
-                logger.warning('超鬼王刷票战斗失败或本场门票未识别，停止当前副本刷票')
-            elif progress[0] >= progress[1]:
-                logger.info(f'超鬼王门票已达上限 {progress[0]}/{progress[1]}，结束当前副本刷票')
+                logger.warning(f'超鬼王连续 {streak.misses} 场未识别门票，停止本轮刷票')
             else:
-                logger.info(f'超鬼王战后门票 {progress[0]}/{progress[1]}，继续当前副本')
-                return result
+                streak.misses = 0
+                if self.ticket_progress_callback is not None:
+                    self.ticket_progress_callback(progress)
+                if progress[0] < progress[1]:
+                    logger.info(f'超鬼王战后门票 {progress[0]}/{progress[1]}，继续当前副本')
+                    return result
+                logger.info(f'超鬼王门票已达上限 {progress[0]}/{progress[1]}，结束当前副本刷票')
             # 让原任务的外层循环正常收尾，保留退队、关闭加成等清理动作。
             self.limit_count = self.current_count
             if self.ticket_farm_source == TicketFarmSource.EXPLORATION:
@@ -123,7 +140,8 @@ class _TicketFarmExploration(_TicketFarmTask):
 
 def run_farming_battle(config, device, source: TicketFarmSource, remaining: timedelta,
                        on_ticket_progress: Callable[[tuple[int, int]], None] | None = None,
-                       *, skip_initial_raid_check: bool = False) -> bool | _RealmRaidNeeded:
+                       *, skip_initial_raid_check: bool = False,
+                       reward_read_streak: _RewardReadStreak | None = None) -> bool | _RealmRaidNeeded:
     """一次进入副本后持续刷票，达到上限或出错时由原任务正常收尾。"""
     source = TicketFarmSource(source)
     module = importlib.import_module(f'tasks.{source.value}.script_task')
@@ -152,6 +170,7 @@ def run_farming_battle(config, device, source: TicketFarmSource, remaining: time
     task = task_class(config=child_config, device=device)
     task.ticket_progress_callback = on_ticket_progress
     task.ticket_farm_continuous = True
+    task.ticket_reward_read_streak = reward_read_streak if reward_read_streak is not None else _RewardReadStreak()
     task.ticket_farm_source = source
     # 加成按钮在庭院中；明确启用加成时保留原任务的准备和收尾路径。
     if source == TicketFarmSource.EXPLORATION:
@@ -217,6 +236,7 @@ class TicketFarmMixin:
                              seconds=farm.limit_time.second)
         deadline = datetime.now() + duration
         progress = self.read_daily_ticket_progress()
+        reward_read_streak = _RewardReadStreak()
         skip_initial_raid_check = False
 
         def remember_reward_progress(value):
@@ -241,11 +261,11 @@ class TicketFarmMixin:
             if remaining.total_seconds() <= 0:
                 logger.info('超鬼王本轮刷票时间已到，等待下次调度继续刷票')
                 return False
-            # 每场都必须收到新的奖励页读数；不沿用上一场读数或返回探索页补读。
-            progress = None
+            # 每场独立读取；副本正常收尾但没有新读数时，仍保留最近一次确认的进度。
             result = run_farming_battle(self.config, self.device, farm.battle_task, remaining,
                                         on_ticket_progress=remember_reward_progress,
-                                        skip_initial_raid_check=skip_initial_raid_check)
+                                        skip_initial_raid_check=skip_initial_raid_check,
+                                        reward_read_streak=reward_read_streak)
             skip_initial_raid_check = False
             if isinstance(result, _RealmRaidNeeded):
                 if datetime.now() >= deadline:
@@ -259,5 +279,5 @@ class TicketFarmMixin:
                 skip_initial_raid_check = True
                 continue
             if not result:
-                logger.warning('超鬼王刷票副本未完成战斗，等待下次调度重试')
+                logger.warning('超鬼王本轮刷票已停止，等待下次调度重试')
                 return False

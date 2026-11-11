@@ -57,6 +57,9 @@ class MetaDemonQuickLoadout(QuickLoadout, MetaDemonAssets):
                 previous = current
         return None
 
+    def _activity_loadout_entry_visible(self) -> bool:
+        return self.appear(self.I_MD_LOADOUT_GEAR) or self.appear(self.I_MD_LOADOUT_GEAR_LEGACY)
+
     def _open_activity_loadout(self):
         timer = Timer(self.PANEL_OPEN_TIMEOUT).start()
         while not timer.reached():
@@ -72,7 +75,7 @@ class MetaDemonQuickLoadout(QuickLoadout, MetaDemonAssets):
                 anchor = copy(self.I_MD_LOADOUT_FIGHT)
                 anchor.roi_front = (x + 95, y - 17, *anchor.roi_front[2:])
                 return self._build_quick_loadout_layout(anchor)
-            if self.appear(self.I_MD_LOADOUT_GEAR):
+            if self._activity_loadout_entry_visible():
                 self.click(self.C_MD_LOADOUT_OPEN, interval=1)
         logger.warning('超鬼王阵容面板打开超时')
         return None
@@ -208,7 +211,7 @@ class MetaDemonQuickLoadout(QuickLoadout, MetaDemonAssets):
                 closed_frames = 0
             elif (not self.appear(self.I_MD_LOADOUT_FIGHT)
                   and not self.appear(self.I_MD_LOADOUT_INCOMPLETE)
-                  and self.appear(self.I_MD_LOADOUT_GEAR)):
+                  and self._activity_loadout_entry_visible()):
                 closed_frames += 1
                 if closed_frames >= 2:
                     return True

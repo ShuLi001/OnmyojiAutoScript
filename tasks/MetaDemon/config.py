@@ -103,7 +103,7 @@ class TicketFarmSource(str, Enum):
 
 
 class MetaDemonTicketFarmConfig(ConfigBase):
-    enable: bool = Field(default=False, description='先刷门票，开始时从探索页读取进度，战斗中从奖励页读取；达到每日上限后攻打超鬼王，识别失败时暂停本轮')
+    enable: bool = Field(default=False, description='先刷门票，开始时从探索页读取进度，战斗中从奖励页读取；满额后攻打超鬼王，连续三场未读到门票数时暂停本轮')
     battle_task: TicketFarmSource = Field(default=TicketFarmSource.EVO_ZONE, description='直接复用所选任务的层数、阵容、组队等配置，在奖励页关闭前读取当日门票数量')
     limit_time: Time = Field(default=Time(minute=30), description='本轮刷门票的最长时间；未到每日上限则等待后重试，不进入超鬼王战斗')
 

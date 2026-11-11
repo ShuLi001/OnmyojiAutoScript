@@ -32,8 +32,10 @@ class MetaDemonAssets:
 
 
 	# Image Rule Assets
-	# 超鬼王阵容栏齿轮
+	# 超鬼王右侧预设入口图标
 	I_MD_LOADOUT_GEAR = RuleImage(roi_front=(1220,430,38,37), roi_back=(1208,418,62,60), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_gear.png")
+	# 超鬼王右侧阵容栏的旧齿轮图标
+	I_MD_LOADOUT_GEAR_LEGACY = RuleImage(roi_front=(1220,430,38,37), roi_back=(1208,418,62,60), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_gear_legacy.png")
 	# 超鬼王快捷阵容出战锚点
 	I_MD_LOADOUT_FIGHT = RuleImage(roi_front=(758,556,118,43), roi_back=(0,0,1280,720), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_fight.png")
 	# 预设人数不足时的面板锚点
@@ -54,6 +56,8 @@ class MetaDemonAssets:
 	I_CHECK_BOSS_PAGE = RuleImage(roi_front=(1064,19,43,40), roi_back=(1054,7,62,63), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_check_boss_page.png")
 	# 活动首页入口的降临二字
 	I_MD_CHECK_MAIN_PAGE = RuleImage(roi_front=(943,151,44,119), roi_back=(929,137,72,147), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_check_main_page.png")
+	# 活动首页入口的白色降临二字
+	I_MD_CHECK_MAIN_PAGE_WHITE = RuleImage(roi_front=(943,151,44,119), roi_back=(929,137,72,147), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_check_main_page_white.png")
 	# 领取昨日奖励 
 	I_MD_GET_YESTERDAY_REWARD = RuleImage(roi_front=(547,571,183,56), roi_back=(471,523,327,163), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_get_yesterday_reward.png")
 	# 一星鬼王召唤票 
