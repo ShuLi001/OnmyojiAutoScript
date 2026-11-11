@@ -22,7 +22,7 @@ page_meta_demon.add_enter_success_hooks(MetaDemonAssets.I_MD_GET_YESTERDAY_REWAR
 page_meta_demon.connect(page_main, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_meta_demon->page_main")
 page_act_list_meta_demon.connect(page_meta_demon, GameUiAssets.I_ACT_LIST_GOTO_ACT, key="page_act_list_meta_demon->page_meta_demon")
 
-page_meta_demon_boss = Page(MetaDemonAssets.I_CHECK_BOSS_PAGE)
+page_meta_demon_boss = Page(any_of(MetaDemonAssets.I_CHECK_BOSS_PAGE_SMALL, MetaDemonAssets.I_CHECK_BOSS_PAGE))
 page_meta_demon_boss.add_enter_success_hooks(MetaDemonAssets.I_MD_CLOSE_POPUP)
 page_meta_demon_boss.connect(page_meta_demon, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_meta_demon_boss->page_meta_demon")
 page_meta_demon.connect(page_meta_demon_boss, MetaDemonAssets.C_MD_ENTER_BOSS, key="page_meta_demon->page_meta_demon_boss")

@@ -99,6 +99,15 @@
     "description": "鬼王页面标志"
   },
   {
+    "itemName": "check_boss_page_small",
+    "imageName": "md_check_boss_page_small.png",
+    "roiFront": "1067,23,37,35",
+    "roiBack": "1054,7,62,63",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "description": "鬼王挑战页新版小尺寸疲劳图标"
+  },
+  {
     "itemName": "md_check_main_page",
     "imageName": "md_md_check_main_page.png",
     "roiFront": "943,151,44,119",

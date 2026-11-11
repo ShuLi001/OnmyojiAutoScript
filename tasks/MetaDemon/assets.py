@@ -54,6 +54,8 @@ class MetaDemonAssets:
 	I_MD_SYNTHESIZE = RuleImage(roi_front=(0,0,100,100), roi_back=(0,0,100,100), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_synthesize.png")
 	# 鬼王页面标志 
 	I_CHECK_BOSS_PAGE = RuleImage(roi_front=(1064,19,43,40), roi_back=(1054,7,62,63), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_check_boss_page.png")
+	# 鬼王挑战页新版小尺寸疲劳图标
+	I_CHECK_BOSS_PAGE_SMALL = RuleImage(roi_front=(1067,23,37,35), roi_back=(1054,7,62,63), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_check_boss_page_small.png")
 	# 活动首页入口的降临二字
 	I_MD_CHECK_MAIN_PAGE = RuleImage(roi_front=(943,151,44,119), roi_back=(929,137,72,147), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_check_main_page.png")
 	# 活动首页入口的白色降临二字
