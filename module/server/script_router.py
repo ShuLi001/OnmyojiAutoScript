@@ -400,6 +400,14 @@ async def script_task(script_name: str, task: str, group: str, argument: str, ty
     return model.script_set_arg(task, group, argument, value)
 
 
+@script_app.get('/{script_name}/{task}/next_run_preview')
+async def preview_next_run(script_name: str, task: str):
+    if script_name not in mm.all_script_files():
+        raise HTTPException(status_code=404, detail='Config not found')
+    next_run = mm.config_cache(script_name).preview_task_next_run(task)
+    return next_run.strftime('%Y-%m-%d %H:%M:%S') if next_run is not None else None
+
+
 @script_app.put('/{script_name}/{task}/sync_next_run')
 async def sync_next_run(script_name: str, task: str, target_dt: str):
     if script_name not in mm.script_process:
