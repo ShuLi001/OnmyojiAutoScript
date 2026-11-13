@@ -1,17 +1,19 @@
-"""超鬼王刷票阶段：启动时读取探索页，战斗中读取奖励页门票进度。"""
+"""超鬼王刷票阶段：优先从召唤队列启动，战斗中读取奖励页进度。"""
 
 import importlib
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta, time
-from typing import Callable, NamedTuple
+from typing import Callable, Literal, NamedTuple
 
+from module.base.timer import Timer
 from module.exception import TaskEnd
 from module.logger import logger
 from tasks.GameUi.page import any_of, page_exploration, page_main, page_reward, random_click
 from tasks.Component.GeneralBattle.general_battle import BattleAction
 from tasks.MetaDemon.config import TicketFarmSource
 from tasks.MetaDemon.assets import MetaDemonAssets
+from tasks.MetaDemon.page import page_meta_demon_boss
 
 
 _REALM_RAID_TICKET_CAP = 30
@@ -211,8 +213,67 @@ def _clear_farming_realm_raid(config, device) -> None:
 
 
 class TicketFarmMixin:
+    def _start_from_ticket_queue(self) -> tuple[int, int] | Literal[True] | None:
+        """未满时前往探索并返回读数；确认满额时关闭队列并返回 True。"""
+        self.screenshot()
+        if not self.appear(self.I_MD_TICKET_QUEUE_TITLE):
+            if not self.goto_page(page_meta_demon_boss, skip_first_screenshot=False):
+                return None
+            timer = Timer(5).start()
+            opened = False
+            while not timer.reached():
+                self.screenshot()
+                if self.appear(self.I_MD_TICKET_QUEUE_TITLE):
+                    break
+                if not opened and self.appear(self.I_MD_SWITCH_TICKET):
+                    self.click(self.C_MD_SWITCH_TICKET)
+                    opened = True
+            else:
+                if not opened and self.appear(self.I_MD_FIRE):
+                    # 已有鬼王可挑战时，右下角可能没有「全部队列」。
+                    logger.info('当前鬼王可挑战且未显示全部队列，从探索页读取门票进度')
+                    return self.read_daily_ticket_progress()
+                logger.warning('超鬼王未能打开全部队列')
+                return None
+
+        timer = Timer(6).start()
+        blank_frames = 0
+        while not timer.reached():
+            self.screenshot()
+            if not self.appear(self.I_MD_TICKET_QUEUE_TITLE):
+                blank_frames = 0
+                continue
+            if self.appear(self.I_MD_TICKET_QUEUE_GO):
+                blank_frames = 0
+                current, _, total = self.O_MD_DAILY_TICKET_QUEUE.ocr_digit_counter(self.device.image)
+                if not 0 <= current < total:
+                    continue
+                self.click(self.I_MD_TICKET_QUEUE_GO)
+                if self._wait_for_destination(self.navigator.resolve_page(page_exploration), timeout=8):
+                    return current, total
+                logger.warning('超鬼王点击前往后未能确认探索页')
+                return None
+            if self.appear(self.I_MD_TICKET_QUEUE_FULL):
+                blank_frames += 1
+                if blank_frames >= 2 and self.appear_then_click(self.I_MD_TICKET_QUEUE_CLOSE):
+                    closing = Timer(5).start()
+                    while not closing.reached():
+                        self.screenshot()
+                        if not self.appear(self.I_MD_TICKET_QUEUE_TITLE):
+                            if self._wait_for_destination(self.navigator.resolve_page(page_meta_demon_boss)):
+                                logger.info('超鬼王全部队列底部为空，今日门票已刷完')
+                                return True
+                            break
+                    logger.warning('超鬼王关闭全部队列后未能确认挑战页')
+                    return None
+            else:
+                blank_frames = 0
+
+        logger.warning('超鬼王未能确认全部队列中的门票进度')
+        return None
+
     def read_daily_ticket_progress(self) -> tuple[int, int] | None:
-        """仅从探索页的 50/50 等计数返回 (当前数量, 每日上限)。
+        """队列不可用或个人突破结束后，从探索页读取当前数量和上限。
 
         每次导航、截图并确认页面后读取，不使用活动页或本地累计。
         页面确认失败或计数无效时返回 None。
@@ -235,7 +296,9 @@ class TicketFarmMixin:
         duration = timedelta(hours=farm.limit_time.hour, minutes=farm.limit_time.minute,
                              seconds=farm.limit_time.second)
         deadline = datetime.now() + duration
-        progress = self.read_daily_ticket_progress()
+        progress = self._start_from_ticket_queue()
+        if progress is True:
+            return True
         reward_read_streak = _RewardReadStreak()
         skip_initial_raid_check = False
 

@@ -32,6 +32,14 @@ class MetaDemonAssets:
 
 
 	# Image Rule Assets
+	# 召唤队列标题
+	I_MD_TICKET_QUEUE_TITLE = RuleImage(roi_front=(438,148,359,47), roi_back=(430,140,375,63), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_ticket_queue_title.png")
+	# 召唤队列底部前往按钮
+	I_MD_TICKET_QUEUE_GO = RuleImage(roi_front=(917,513,58,26), roi_back=(908,505,76,37), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_ticket_queue_go.png")
+	# 召唤队列关闭按钮
+	I_MD_TICKET_QUEUE_CLOSE = RuleImage(roi_front=(1005,158,42,40), roi_back=(995,149,62,58), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_ticket_queue_close.png")
+	# 召唤队列满额时的底部空白
+	I_MD_TICKET_QUEUE_FULL = RuleImage(roi_front=(288,508,698,34), roi_back=(284,504,706,38), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_ticket_queue_full.png")
 	# 超鬼王右侧预设入口图标
 	I_MD_LOADOUT_GEAR = RuleImage(roi_front=(1220,430,38,37), roi_back=(1208,418,62,60), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_gear.png")
 	# 超鬼王右侧阵容栏的旧齿轮图标
@@ -62,6 +70,8 @@ class MetaDemonAssets:
 	I_MD_CHECK_MAIN_PAGE_WHITE = RuleImage(roi_front=(943,151,44,119), roi_back=(929,137,72,147), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_check_main_page_white.png")
 	# 领取昨日奖励 
 	I_MD_GET_YESTERDAY_REWARD = RuleImage(roi_front=(547,571,183,56), roi_back=(471,523,327,163), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_get_yesterday_reward.png")
+	# 次日首次进入鬼王挑战页时昨日狩猎奖励的领取按钮
+	I_MD_CLAIM_HUNT_REWARD = RuleImage(roi_front=(707,546,186,46), roi_back=(676,528,248,82), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_claim_hunt_reward.png")
 	# 一星鬼王召唤票 
 	I_MD_ONE_STAR = RuleImage(roi_front=(361,316,68,68), roi_back=(261,299,754,133), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_md_one_star.png")
 	# 二星鬼王召唤票 
@@ -123,6 +133,8 @@ class MetaDemonAssets:
 
 
 	# Ocr Rule Assets
+	# 全部队列底部超鬼王当日门票获取进度
+	O_MD_DAILY_TICKET_QUEUE = RuleOcr(roi=(847,514,52,24), area=(847,514,52,24), mode="DigitCounter", method="Default", keyword="", name="md_daily_ticket_queue")
 	# 战斗奖励页超鬼王当日门票获取进度
 	O_MD_DAILY_TICKET_REWARD = RuleOcr(roi=(1138,6,100,36), area=(1138,6,100,36), mode="DigitCounter", method="Default", keyword="", name="md_daily_ticket_reward")
 	# 探索页超鬼王当日门票获取进度

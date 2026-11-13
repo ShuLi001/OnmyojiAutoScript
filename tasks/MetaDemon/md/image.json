@@ -1,5 +1,41 @@
 [
   {
+    "itemName": "md_ticket_queue_title",
+    "imageName": "md_ticket_queue_title.png",
+    "roiFront": "438,148,359,47",
+    "roiBack": "430,140,375,63",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "召唤队列标题"
+  },
+  {
+    "itemName": "md_ticket_queue_go",
+    "imageName": "md_ticket_queue_go.png",
+    "roiFront": "917,513,58,26",
+    "roiBack": "908,505,76,37",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "召唤队列底部前往按钮"
+  },
+  {
+    "itemName": "md_ticket_queue_close",
+    "imageName": "md_ticket_queue_close.png",
+    "roiFront": "1005,158,42,40",
+    "roiBack": "995,149,62,58",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "召唤队列关闭按钮"
+  },
+  {
+    "itemName": "md_ticket_queue_full",
+    "imageName": "md_ticket_queue_full.png",
+    "roiFront": "288,508,698,34",
+    "roiBack": "284,504,706,38",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "召唤队列满额时的底部空白"
+  },
+  {
     "itemName": "md_loadout_gear",
     "imageName": "md_loadout_gear.png",
     "roiFront": "1220,430,38,37",
@@ -133,6 +169,15 @@
     "method": "Template matching",
     "threshold": 0.8,
     "description": "领取昨日奖励"
+  },
+  {
+    "itemName": "md_claim_hunt_reward",
+    "imageName": "md_claim_hunt_reward.png",
+    "roiFront": "707,546,186,46",
+    "roiBack": "676,528,248,82",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "次日首次进入鬼王挑战页时昨日狩猎奖励的领取按钮"
   },
   {
     "itemName": "md_one_star",

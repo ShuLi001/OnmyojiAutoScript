@@ -54,6 +54,7 @@ class ScriptTask(TicketFarmMixin, GeneralBattle, MetaDemonQuickLoadout, GameUi):
         self.cur_boss_type = None
         self.total_count = 0
         self.current_count = 0
+        self.navigator.add_unknown_closer(self.I_MD_CLAIM_HUNT_REWARD)
         self.navigator.add_unknown_closer(self.I_MD_GET_YESTERDAY_REWARD)
         self.conf = self.config.meta_demon
         self.limit_time = self.conf.meta_demon_config.limit_time_v

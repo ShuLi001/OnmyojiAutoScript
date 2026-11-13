@@ -1,5 +1,14 @@
 [
   {
+    "itemName": "md_daily_ticket_queue",
+    "roiFront": "847,514,52,24",
+    "roiBack": "847,514,52,24",
+    "mode": "DigitCounter",
+    "method": "Default",
+    "keyword": "",
+    "description": "全部队列底部超鬼王当日门票获取进度"
+  },
+  {
     "itemName": "md_daily_ticket_reward",
     "roiFront": "1138,6,100,36",
     "roiBack": "1138,6,100,36",
