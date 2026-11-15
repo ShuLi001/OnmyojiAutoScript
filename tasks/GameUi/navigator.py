@@ -38,6 +38,7 @@ class GameUi(ChessBattleNavigationMixin, BaseTask, GameUiAssets):
     """页面识别、导航与未知页恢复的统一入口。"""
 
     REPEATED_TRANSITION_FAILURE_THRESHOLD = 3
+    MAX_CONSECUTIVE_PAGE_FAILURES: int | None = None
 
     # 全局未知页关闭动作，所有任务共享。
     DEFAULT_UNKNOWN_CLOSERS = [
@@ -798,6 +799,9 @@ class GameUi(ChessBattleNavigationMixin, BaseTask, GameUiAssets):
         repeated_failure_transition_key: str | None = None
         repeated_failure_count = 0
         last_repeated_failure_close_result: str | None = None
+        page_failure_limit = self.MAX_CONSECUTIVE_PAGE_FAILURES
+        failed_page_key: str | None = None
+        page_failure_count = 0
 
         def reset_repeated_transition_failures() -> None:
             nonlocal repeated_failure_transition_key, repeated_failure_count
@@ -824,6 +828,9 @@ class GameUi(ChessBattleNavigationMixin, BaseTask, GameUiAssets):
                     )
                     raise GamePageUnknownError(f"Cannot goto page[{destination}]")
                 continue
+
+            if current.key == failed_page_key:
+                failed_page_key, page_failure_count = None, 0
 
             if current.key != last_detected_page_key:
                 self._run_enter_success_hooks_if_needed(current)
@@ -863,6 +870,16 @@ class GameUi(ChessBattleNavigationMixin, BaseTask, GameUiAssets):
             for transition in path:
                 if not self._execute_transition(transition):
                     advanced = False
+                    if page_failure_limit is not None:
+                        # 返回中转页不代表已经到达失败的目标页。
+                        page_key = transition.destination.key
+                        page_failure_count = page_failure_count + 1 if page_key == failed_page_key else 1
+                        failed_page_key = page_key
+                        if page_failure_count > page_failure_limit:
+                            message = (f"Cannot reach page[{page_key}] after {page_failure_count} consecutive failures "
+                                       f"via {transition.key}; target page[{destination.key}]")
+                            logger.error(message)
+                            raise GamePageUnknownError(message)
                     if repeated_failure_transition_key == transition.key:
                         repeated_failure_count += 1
                     else:
@@ -876,6 +893,8 @@ class GameUi(ChessBattleNavigationMixin, BaseTask, GameUiAssets):
                             last_progress_signature = ("close_unknown_after_repeated_failure", transition.key)
                             reset_repeated_transition_failures()
                     break
+                if transition.destination.key == failed_page_key:
+                    failed_page_key, page_failure_count = None, 0
                 progress_timer.reset()
                 last_detected_page_key = transition.destination.key
                 last_repeated_failure_close_result = None
