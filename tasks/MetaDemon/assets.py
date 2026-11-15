@@ -64,10 +64,10 @@ class MetaDemonAssets:
 	I_CHECK_BOSS_PAGE = RuleImage(roi_front=(1064,19,43,40), roi_back=(1054,7,62,63), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_check_boss_page.png")
 	# 鬼王挑战页新版小尺寸疲劳图标
 	I_CHECK_BOSS_PAGE_SMALL = RuleImage(roi_front=(1067,23,37,35), roi_back=(1054,7,62,63), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_check_boss_page_small.png")
-	# 活动首页入口的降临二字
-	I_MD_CHECK_MAIN_PAGE = RuleImage(roi_front=(943,151,44,119), roi_back=(929,137,72,147), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_check_main_page.png")
-	# 活动首页入口的白色降临二字
-	I_MD_CHECK_MAIN_PAGE_WHITE = RuleImage(roi_front=(943,151,44,119), roi_back=(929,137,72,147), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_check_main_page_white.png")
+	# 活动首页入口的祸主二字
+	I_MD_CHECK_MAIN_PAGE = RuleImage(roi_front=(896,56,46,117), roi_back=(882,42,74,145), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_check_main_page.png")
+	# 活动首页入口的白色祸主二字
+	I_MD_CHECK_MAIN_PAGE_WHITE = RuleImage(roi_front=(896,56,46,117), roi_back=(882,42,74,145), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_check_main_page_white.png")
 	# 领取昨日奖励 
 	I_MD_GET_YESTERDAY_REWARD = RuleImage(roi_front=(547,571,183,56), roi_back=(471,523,327,163), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_md_get_yesterday_reward.png")
 	# 次日首次进入鬼王挑战页时昨日狩猎奖励的领取按钮
