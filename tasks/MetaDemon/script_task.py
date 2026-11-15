@@ -28,7 +28,7 @@ from module.exception import TaskEnd
 class ScriptTask(TicketFarmMixin, GeneralBattle, MetaDemonQuickLoadout, GameUi):
     """超鬼王"""
 
-    MAX_CONSECUTIVE_PAGE_FAILURES = 5
+    ABORT_ON_TRANSITION_FAILURE = True
 
     class State:
         done: bool = False
