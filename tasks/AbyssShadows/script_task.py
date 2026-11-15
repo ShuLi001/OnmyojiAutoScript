@@ -7,18 +7,17 @@ from time import sleep
 
 from datetime import datetime
 
-from module.exception import TaskEnd, RequestHumanTakeover
+from module.exception import TaskEnd
 from module.base.timer import Timer
 from module.logger import logger
 from module.config.config import Config
 from module.config.weekly_schedule import next_weekly_run
 from module.device.device import Device
-from tasks.AbyssShadows.assets import AbyssShadowsAssets
 from tasks.AbyssShadows.config import AbyssShadows, EnemyType, AreaType, Code, AbyssShadowsDifficulty, \
     CodeList, IndexMap
-from tasks.AbyssShadows.page import page_abyss, page_abyss_map, page_shikigami_records
+from tasks.AbyssShadows.page import page_abyss
+from tasks.AbyssShadows.quick_loadout import AbyssShadowsQuickLoadout
 from tasks.Component.GeneralBattle.general_battle import GeneralBattle
-from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
 from tasks.GameUi.game_ui import GameUi
 from tasks.GameUi.page import page_main
 
@@ -30,7 +29,7 @@ class AbyssShadowsFinished(Exception):
     pass
 
 
-class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
+class ScriptTask(GeneralBattle, GameUi, AbyssShadowsQuickLoadout):
     #
     min_count = {
         EnemyType.BOSS: 2,  # 最少首领战斗次数
@@ -40,22 +39,12 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
 
     def __init__(self, config: Config, device: Device):
         super().__init__(config, device)
-        # 当前所用队伍预设
-        self.cur_preset = None
-        # 当前御魂预设缓存
-        self.cur_soul_preset = None
-        # 精英预设切换状态标志
-        self.elite_preset_switched = False
-        # 副将预设切换状态标志
-        self.general_preset_switched = False
         # process list
         self.ps_list: CodeList = CodeList('')
         # 已完成 列表
         self.done_list: CodeList = CodeList('')
         # 已知的 已经被打完的  列表
         self.unavailable_list: CodeList = CodeList('')
-        # 是否已经切换过御魂
-        self.switch_soul_done = False
 
     def run(self):
         """ 狭间暗域主函数
@@ -89,21 +78,12 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
             if _next is None:
                 raise AbyssShadowsFinished
             area_enter = _next.get_areatype()
-            # 获取第一个敌人的类型
-            first_enemy_type = _next.get_enemy_type() 
-
             # 通过能否进入，检测狭间是否开启
             if not self.select_boss(area_enter):
                 logger.warning("Failed to enter abyss shadows")
                 self.goto_page(page_main)
                 self.set_next_run(task='AbyssShadows', server=False, target=self.get_next_dt(datetime.now()))
                 raise TaskEnd
-
-            # 在等待战斗开始前，于狭间页面内切换御魂
-            if self.config.model.abyss_shadows.process_manage.enable_switch_soul_in_as:
-                logger.info(f"进入狭间，准备为第一个敌人({_next})切换御魂...")
-                # 调用现有的、在狭间内切换御魂的函数
-                self.switch_soul_in_abyss(first_enemy_type)
 
             # 集结中图片
             self.wait_until_appear(self.I_WAIT_TO_START, wait_time=2)
@@ -496,14 +476,6 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
     def execute(self, item_code: Code):
         logger.info(f"Start to execute code {item_code}")
 
-        # 先获取敌人类型
-        enemy_type = item_code.get_enemy_type()
-
-        # 在狭间中切换御魂
-        if self.config.model.abyss_shadows.process_manage.enable_switch_soul_in_as:
-            # 直接调用，内部会判断是否切换
-            self.switch_soul_in_abyss(enemy_type)
-
         area = item_code.get_areatype()
 
         if not self.change_area(area):
@@ -517,6 +489,11 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
             # 前往失败，添加进unavailable_list
             self.unavailable_list.append(item_code)
             return False
+
+        # 每个目标只在首次挑战前应用预设；同一目标补打时沿用阵容。
+        if not self.check_and_switch_lineup(item_code.get_enemy_type()):
+            self.set_next_run(task='AbyssShadows', server=False, target=self.get_next_dt(datetime.now()))
+            raise TaskEnd
 
         battle_count = MAX_BATTLE_COUNT
         while battle_count > 0:
@@ -540,48 +517,22 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
         self.done_list.append(item_code)
         return True
 
+    def check_and_switch_lineup(self, enemy_type: EnemyType) -> bool:
+        cfg = self.config.model.abyss_shadows.process_manage
+        if not cfg.enable_switch_loadout_in_as:
+            return True
+        try:
+            target = cfg.get_lineup(enemy_type)
+            if target is None or self.apply_activity_loadout(target):
+                return True
+        except ValueError as error:
+            logger.warning(f'狭间暗域阵容配置无效（{enemy_type.name}）：{error}')
+        logger.warning(f'狭间暗域未应用 {enemy_type.name} 阵容，结束本轮挑战')
+        return False
+
     def run_battle(self, item_code: Code):
         success = False
         enemy_type = item_code.get_enemy_type()
-
-        # 判断是否需要更换预设
-        def get_preset(_enemy_type: EnemyType):
-            match _enemy_type:
-                case EnemyType.BOSS:
-                    return self.config.model.abyss_shadows.process_manage.preset_boss
-                case EnemyType.GENERAL:
-                    return self.config.model.abyss_shadows.process_manage.preset_general
-                case EnemyType.ELITE:
-                    return self.config.model.abyss_shadows.process_manage.preset_elite
-
-        preset = get_preset(enemy_type)
-
-        if self.config.model.abyss_shadows.process_manage.enable_switch_preset_in_as:
-            # 首领：每一次都需要更换预设队伍
-            if enemy_type == EnemyType.BOSS:
-                logger.info(f"敌人类型 {enemy_type.name} -- [强制] 切换阵容预设到 {preset}")
-                self.switch_preset_team_with_str(preset)
-                self.cur_preset = preset
-                
-            # 精英：只需要切换一次预设队伍
-            elif enemy_type == EnemyType.ELITE:
-                if not self.elite_preset_switched:
-                    logger.info(f"敌人类型 {enemy_type.name} -- 首次切换精英阵容预设到 {preset}")
-                    self.switch_preset_team_with_str(preset)
-                    self.cur_preset = preset
-                    self.elite_preset_switched = True
-                else:
-                    logger.info(f"敌人类型 {enemy_type.name} -- 精英预设队伍已激活，跳过切换预设队伍")
-                    
-            # 副将：只需要切换一次预设队伍
-            elif enemy_type == EnemyType.GENERAL:
-                if not self.general_preset_switched:
-                    logger.info(f"敌人类型 {enemy_type.name} -- 首次切换副将阵容预设到 {preset}")
-                    self.switch_preset_team_with_str(preset)
-                    self.cur_preset = preset
-                    self.general_preset_switched = True
-                else:
-                    logger.info(f"敌人类型 {enemy_type.name} -- 副将预设队伍已激活，跳过切换预设队伍")
 
         # 点击准备
         _timer_battle = Timer(180)
@@ -672,76 +623,6 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
                     self.wait_until_appear(self.I_EXIT_ENSURE, wait_time=1)
                 continue
         return
-
-    def switch_preset_team_with_str(self, v: str):
-        tmp = v.split(',')
-        if not tmp or len(tmp) != 2:
-            logger.error(f"Due to a configuration error (value: {v}), an error occurred while switch preset team.")
-            return
-        self.switch_preset_team(True, int(tmp[0]), int(tmp[1]))
-
-    def switch_soul_in_abyss(self, enemy_type: EnemyType):
-        """从狭间活动页面进入式神录切换御魂（带预设缓存）"""
-        if not self.config.model.abyss_shadows.process_manage.enable_switch_soul_in_as:
-            return
-
-        logger.info(f"开始在狭间中切换御魂，敌人类型: {enemy_type.name}")
-
-        # 使用 check_current_area 确认是否在狭间活动页面
-        current_area = self.check_current_area()
-        if current_area is None:
-            logger.warning("不在狭间活动页面，无法进行御魂切换")
-            return
-        else:
-            logger.info(f"当前在狭间活动页面，区域: {current_area.name}")
-
-        # 根据敌人类型获取对应的御魂预设
-        preset_str = None
-        match enemy_type:
-            case EnemyType.BOSS:
-                preset_str = self.config.model.abyss_shadows.process_manage.preset_boss
-            case EnemyType.GENERAL:
-                preset_str = self.config.model.abyss_shadows.process_manage.preset_general
-            case EnemyType.ELITE:
-                preset_str = self.config.model.abyss_shadows.process_manage.preset_elite
-
-        if not preset_str:
-            logger.warning("未配置御魂预设")
-            return
-
-        # 检查预设是否有效（不是 -1,-1）
-        if preset_str == "-1,-1":
-            logger.info(f"{enemy_type.name} 的预设为 -1,-1，跳过御魂切换")
-            return
-
-        # 检查预设是否与当前相同
-        if self.cur_soul_preset == preset_str:
-            logger.info(f"{enemy_type.name} 的预设 {preset_str} 与当前相同，跳过切换")
-            return
-
-        # 直接在狭间页面点击式神录按钮进入式神录
-        self.goto_page(page_shikigami_records)
-
-        # 切换御魂
-        try:
-            l = preset_str.split(',')
-            if len(l) != 2:
-                logger.error(f"无效的预设格式: {preset_str}")
-                raise RequestHumanTakeover
-
-            # 执行御魂切换
-            self.run_switch_soul((int(l[0]), int(l[1])))
-
-            # 更新当前御魂预设
-            self.cur_soul_preset = preset_str
-
-            logger.info(f"成功在狭间中切换至 {enemy_type.name} 预设 {preset_str}")
-        except Exception as e:
-            logger.error(f"御魂切换失败: {e}")
-            raise RequestHumanTakeover
-        finally:
-            # 返回狭间活动页面
-            self.goto_page(page_abyss_map)
 
     def check_available(self, item_code: Code):
         # 判断该怪物是否可用

@@ -10,18 +10,19 @@ from tasks.Component.GeneralBattle.general_battle import BattleAction, GeneralBa
 from tasks.Component.GeneralInvite.general_invite import GeneralInvite
 from tasks.Component.GeneralBuff.general_buff import GeneralBuff
 from tasks.Component.GeneralRoom.general_room import GeneralRoom
-from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
+from tasks.Component.QuickLoadout.dungeon import DungeonQuickLoadout
 from tasks.GameUi.game_ui import GameUi
-from tasks.GameUi.page import any_of, page_main, page_reward, page_shikigami_records, page_soul_zones
+from tasks.GameUi.page import any_of, page_main, page_reward
 from tasks.Orochi.assets import OrochiAssets
-from tasks.Orochi.config import Orochi, UserStatus, Layer
+from tasks.Orochi.config import Orochi, UserStatus
 from tasks.TrueOrochi.assets import TrueOrochiAssets
 from module.logger import logger
 from module.exception import TaskEnd
 from tasks.Orochi.page import page_orochi
 
 
-class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi, SwitchSoul, OrochiAssets, TrueOrochiAssets):
+class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi, DungeonQuickLoadout, OrochiAssets, TrueOrochiAssets):
+    LOADOUT_TASK_NAME = '御魂'
 
     def _orochi_battle_key(self) -> str:
         return f"orochi_{self.config.orochi.orochi_config.layer}"
@@ -30,7 +31,7 @@ class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi,
         reward_page = self.navigator.resolve_page(page_reward)
         if reward_page is None:
             return
-        reward_page.recognizer = any_of(self.I_GI_SURE, self.I_GREED_GHOST, self.I_PET_PRESENT,
+        reward_page.recognizer = any_of(self.INVITE_AGAIN_POPUP, self.I_GREED_GHOST, self.I_PET_PRESENT,
                                         reward_page.recognizer)
 
     def _exit_matcher(self) -> ExitMatcher | None:
@@ -43,9 +44,10 @@ class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi,
             return BattleAction.CONTINUE
         return super()._handle_reward(context, config)
 
-    def run(self) -> bool:
-        self.switch_orochi_souls()
+    def _apply_prepare_preset(self, config: GeneralBattleConfig) -> None:
+        self._apply_first_dungeon_battle_preset()
 
+    def run(self) -> bool:
         limit_count = self.config.orochi.orochi_config.limit_count
         limit_time = self.config.orochi.orochi_config.limit_time
         self.current_count = 0
@@ -53,8 +55,19 @@ class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi,
         self.limit_time: timedelta = timedelta(hours=limit_time.hour, minutes=limit_time.minute, seconds=limit_time.second)
 
         config: Orochi = self.config.orochi
-        if not self.is_in_battle(True):
-            self.goto_page(page_main)
+        role = config.orochi_config.user_status
+        member = role == UserStatus.MEMBER
+        self._first_battle_lineup = None
+        in_battle = self.is_in_battle(True)
+        if not in_battle:
+            if not self.switch_orochi_souls(
+                    member=member, team_battle=role in (UserStatus.LEADER, UserStatus.MEMBER, UserStatus.WILD),
+                    select_layer=True):
+                self.set_next_run('Orochi', finish=False, success=False)
+                self.goto_page(page_main)
+                raise TaskEnd
+            if member or config.orochi_config.soul_buff_enable:
+                self.goto_page(page_main)
             if config.orochi_config.soul_buff_enable:
                 self.open_buff()
                 self.soul(is_open=True)
@@ -89,19 +102,24 @@ class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi,
 
         raise TaskEnd
 
-    def switch_orochi_souls(self):
-        # 御魂切换方式一
-        if self.config.orochi.switch_soul.enable:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul(self.config.orochi.switch_soul.switch_group_team)
+    def switch_orochi_souls(self, *, member: bool = False, team_battle: bool = False,
+                            select_layer: bool = False) -> bool:
+        config = self.config.orochi
+        layer = config.orochi_config.layer
 
-        # 御魂切换方式二
-        if self.config.orochi.switch_soul.enable_switch_by_name:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul_by_name(self.config.orochi.switch_soul.group_name,
-                                         self.config.orochi.switch_soul.team_name)
-        # 根据选层切换御魂
-        self.orochi_switch_soul()
+        def enter_loadout_page():
+            self.goto_page(page_orochi)
+            if select_layer and not self.check_layer(layer):
+                logger.warning(f'未找到御魂层数：{layer}')
+                return False
+            return True
+
+        return self.apply_dungeon_loadout(
+            lambda: config.general_battle_config.get_lineup(layer),
+            enter_loadout_page,
+            member=member,
+            team_battle=team_battle,
+        )
 
     def check_layer(self, layer: str) -> bool:
         """
@@ -370,26 +388,6 @@ class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi,
             if self.appear(self.I_MATCHING) or self.appear(self.I_CHECK_EXPLORATION):
                 return True
         return False
-
-    def orochi_switch_soul(self) -> None:
-        # 判断是否开启根据选层切换御魂
-        orochi_switch_soul = self.config.orochi.switch_soul
-        if not orochi_switch_soul.auto_switch_soul:
-            return
-        group_team: str = ''
-        layer = self.config.orochi.orochi_config.layer
-        match layer:
-            case Layer.TEN:
-                group_team = orochi_switch_soul.ten_switch
-            case Layer.ELEVEN:
-                group_team = orochi_switch_soul.eleven_switch
-            case Layer.TWELVE:
-                group_team = orochi_switch_soul.twelve_switch
-            case Layer.THIRTEEN:
-                group_team = orochi_switch_soul.thirteen_switch
-        self.goto_page(page_shikigami_records)
-        self.run_switch_soul(group_team)
-
 
 if __name__ == '__main__':
     from module.config.config import Config

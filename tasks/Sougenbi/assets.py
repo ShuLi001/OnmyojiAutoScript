@@ -23,9 +23,9 @@ class SougenbiAssets:
 	# 进入业原火 
 	I_S_SOUGENBI = RuleImage(roi_front=(567,147,48,51), roi_back=(435,55,188,213), threshold=0.8, method="Template matching", file="./tasks/Sougenbi/s/s_s_sougenbi.png")
 	# description 
-	I_S_TEAM_LOCK = RuleImage(roi_front=(703,657,23,28), roi_back=(688,648,52,54), threshold=0.8, method="Template matching", file="./tasks/Sougenbi/s/s_s_team_lock.png")
+	I_S_TEAM_LOCK = RuleImage(roi_front=(699,652,32,35), roi_back=(689,643,52,52), threshold=0.8, method="Template matching", file="./tasks/Sougenbi/s/s_s_team_lock.png")
 	# description 
-	I_S_TEAM_UNLOCK = RuleImage(roi_front=(704,658,22,26), roi_back=(688,648,55,60), threshold=0.8, method="Template matching", file="./tasks/Sougenbi/s/s_s_team_unlock.png")
+	I_S_TEAM_UNLOCK = RuleImage(roi_front=(699,652,32,35), roi_back=(689,643,52,52), threshold=0.8, method="Template matching", file="./tasks/Sougenbi/s/s_s_team_unlock.png")
 	# 挑战 
 	I_S_FIRE = RuleImage(roi_front=(1054,597,95,47), roi_back=(1044,577,115,109), threshold=0.7, method="Template matching", file="./tasks/Sougenbi/s/s_s_fire.png")
 	# 确认进入业原火 

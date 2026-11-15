@@ -5,11 +5,10 @@ from pydantic import BaseModel, Field
 from enum import Enum
 from datetime import datetime, time
 
-from tasks.Component.SwitchSoul.switch_soul_config import SwitchSoulConfig as BaseSwitchSoulConfig
 from tasks.Component.config_scheduler import Scheduler
 from tasks.Component.config_base import ConfigBase, Time
 from tasks.Component.GeneralInvite.config_invite import InviteConfig
-from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
+from tasks.Component.QuickLoadout.dungeon_config import DungeonBattleConfig, DungeonLoadoutTaskConfig
 
 
 class UserStatus(str, Enum):
@@ -48,12 +47,7 @@ class OrochiConfig(ConfigBase):
     # 是否御魂结束检测是否出现真蛇
     check_true_orochi_enable: bool = Field(default=False, description='check_true_orochi_enable_help')
 
-class SwitchSoulConfig(BaseSwitchSoulConfig):
-    enable: bool = Field(default=False)
-    switch_group_team: str = Field(default='-1,-1', description='switch_group_team_help')
-    enable_switch_by_name: bool = Field(default=False, description='enable_switch_by_name_help')
-    group_name: str = Field(default='')
-    team_name: str = Field(default='')
+class OrochiBattleConfig(DungeonBattleConfig):
     auto_switch_soul: bool = Field(default=False, description='auto_switch_soul_orochi_help')
     # 十层 config
     ten_switch: str = Field(default='-1,-1', description='ten_switch_help')
@@ -64,11 +58,24 @@ class SwitchSoulConfig(BaseSwitchSoulConfig):
     # 虚无 config
     thirteen_switch: str = Field(default='-1,-1', description='thirteen_switch_help')
 
+    def get_lineup(self, layer: Layer | None = None) -> tuple[int, int] | tuple[str, str] | None:
+        if self.enable_dungeon_loadout and self.auto_switch_soul:
+            field = {
+                Layer.TEN: 'ten_switch', Layer.ELEVEN: 'eleven_switch',
+                Layer.TWELVE: 'twelve_switch', Layer.THIRTEEN: 'thirteen_switch',
+            }.get(layer)
+            if field and (target := self.parse_lineup(getattr(self, field))) is not None:
+                return target
+        return super().get_lineup()
 
-class Orochi(ConfigBase):
+
+class Orochi(DungeonLoadoutTaskConfig):
+    LEGACY_DUNGEON_GROUP = 'orochi_config'
+    LEGACY_SOUL_GROUP = 'switch_soul'
+    LEGACY_LAYER_FIELDS = ('auto_switch_soul', 'ten_switch', 'eleven_switch', 'twelve_switch', 'thirteen_switch')
+
     scheduler: Scheduler = Field(default_factory=Scheduler)
     orochi_config: OrochiConfig = Field(default_factory=OrochiConfig)
     invite_config: InviteConfig = Field(default_factory=InviteConfig)
-    general_battle_config: GeneralBattleConfig = Field(default_factory=GeneralBattleConfig)
-    switch_soul: SwitchSoulConfig = Field(default_factory=SwitchSoulConfig)
+    general_battle_config: OrochiBattleConfig = Field(default_factory=OrochiBattleConfig)
 

@@ -8,6 +8,7 @@ from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleCon
 from tasks.Component.config_scheduler import Scheduler
 from tasks.Component.config_base import ConfigBase, DateTime, TimeDelta, Time, dynamic_hide
 from tasks.Component.GeneralInvite.config_invite import FindMode, InviteConfig
+from tasks.Component.QuickLoadout.dungeon_config import DungeonBattleConfig
 
 
 class BondlingMode(str, Enum):
@@ -61,7 +62,7 @@ class BondlingConfig(ConfigBase):
     bondling_stone_enable: bool = Field(default=False, description='没有契灵了是否使用鸣契石购买契灵')
     bondling_search_enable: bool = Field(default=False, description='没有契灵了是否自动探查(要求身份必须是alone,否则此项无效)\n'
                                                                     '若启用了购买契灵则优先购买契灵,购买失败则进行探查\n'
-                                                                    '若启用了切换御魂则切换契灵御魂的同时也会切换探查御魂\n'
+                                                                    '启用队伍预设后，探查和结契分别应用各自的预设\n'
                                                                     '注:探查耗费的时间与次数也计入总时间和次数中')
     check_enable: bool = Field(default=True, description='是否检查契忆数量')
     limit_num: int = Field(default=2000, description='契忆数量限制,到达此限制将自动结束任务(仅在任务开始时判断)')
@@ -78,30 +79,22 @@ class BondlingConfig(ConfigBase):
 
 class BondlingSwitchSoul(ConfigBase):
     enable: bool = Field(default=False,
-                         description='若是数字,则以编号方式切换御魂(组号,队伍号),组号1-7,队伍号1-4\n若非数字,则自动以ocr方式切换御魂(组名,队伍名)')
-    search_switch: str = Field(default='', description='设置探查御魂装配分组')
-    tomb_guard_switch: str = Field(default='', description='tomb_guard_switch_help')
-    snowball_switch: str = Field(default='', description='snowball_switch_help')
-    little_kuro_switch: str = Field(default='', description='little_kuro_switch_help')
-    azure_basan_switch: str = Field(default='', description='azure_basan_switch_help')
-    bondling_2_1_switch: str = Field(default='', description='设置针女御魂装配分组')
-    bondling_2_2_switch: str = Field(default='', description='设置薙魂御魂装配分组')
-    bondling_2_3_switch: str = Field(default='', description='设置月魔兔御魂装配分组')
-    bondling_2_4_switch: str = Field(default='', description='设置狐火御魂装配分组')
+                         description='battle_bondling_loadout_help')
+    search_switch: str = Field(default='', description='dungeon_preset_help')
+    tomb_guard_switch: str = Field(default='', description='dungeon_preset_help')
+    snowball_switch: str = Field(default='', description='dungeon_preset_help')
+    little_kuro_switch: str = Field(default='', description='dungeon_preset_help')
+    azure_basan_switch: str = Field(default='', description='dungeon_preset_help')
+    bondling_2_1_switch: str = Field(default='', description='dungeon_preset_help')
+    bondling_2_2_switch: str = Field(default='', description='dungeon_preset_help')
+    bondling_2_3_switch: str = Field(default='', description='dungeon_preset_help')
+    bondling_2_4_switch: str = Field(default='', description='dungeon_preset_help')
 
-    def get_switch_by_enum(self, bondling_enum: BondlingClass) -> tuple[str, tuple[str | int, str | int]]:
-        """根据枚举获取对应的 切换类型, (group,team)"""
-        return self.get_switch_by_name(f"{bondling_enum.name.lower()}_switch")
-
-    def get_switch_by_name(self, switch_name: str) -> tuple[str, tuple[str | int, str | int]]:
-        """根据名称获取对应的御魂预设"""
-        group_team = getattr(self, switch_name, None)
-        if group_team is None or group_team.strip() == '' or ',' not in group_team or len(group_team.split(',')) != 2:
-            return None, (None, None)
-        group, team = group_team.split(',')
-        if group.isdigit() and team.isdigit():
-            return 'int', (int(group), int(team))
-        return 'str', (group, team)
+    def get_lineup(self, bondling: BondlingClass | None = None) -> tuple[int, int] | tuple[str, str] | None:
+        if not self.enable:
+            return None
+        field = 'search_switch' if bondling is None else f'{bondling.name.lower()}_switch'
+        return DungeonBattleConfig.parse_lineup(getattr(self, field))
 
 
 class BattleConfig(GeneralBattleConfig):

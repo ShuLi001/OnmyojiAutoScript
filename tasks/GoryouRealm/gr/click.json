@@ -22,5 +22,29 @@
     "roiFront": "1026,82,206,334",
     "roiBack": "1026,82,206,334",
     "description": "description"
+  },
+  {
+    "itemName": "gr_tab_1",
+    "roiFront": "33,120,28,80",
+    "roiBack": "33,120,28,80",
+    "description": "御灵详情左侧暗神龙"
+  },
+  {
+    "itemName": "gr_tab_2",
+    "roiFront": "33,276,28,80",
+    "roiBack": "33,276,28,80",
+    "description": "御灵详情左侧暗白蔵主"
+  },
+  {
+    "itemName": "gr_tab_3",
+    "roiFront": "33,432,28,80",
+    "roiBack": "33,432,28,80",
+    "description": "御灵详情左侧暗黑豹"
+  },
+  {
+    "itemName": "gr_tab_4",
+    "roiFront": "33,588,28,80",
+    "roiBack": "33,588,28,80",
+    "description": "御灵详情左侧暗孔雀"
   }
 ]

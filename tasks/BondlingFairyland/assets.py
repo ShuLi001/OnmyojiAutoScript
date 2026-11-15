@@ -11,6 +11,8 @@ class BondlingFairylandAssets:
 
 
 	# Image Rule Assets
+	# 探查和结契预设面板的右下边框
+	I_BALL_LOADOUT_BORDER = RuleImage(roi_front=(928,507,42,20), roi_back=(920,499,58,36), threshold=0.9, method="Template matching", file="./tasks/BondlingFairyland/ball/ball_loadout_border.png")
 	# 挑战 
 	I_BALL_FIRE = RuleImage(roi_front=(1140,575,100,100), roi_back=(1140,575,100,100), threshold=0.8, method="Template matching", file="./tasks/BondlingFairyland/ball/ball_ball_fire.png")
 	# description 
@@ -46,6 +48,14 @@ class BondlingFairylandAssets:
 	C_AREA_2 = RuleClick(roi_front=(689,118,121,77), roi_back=(0,0,100,100), name="area_2")
 	# 平安京地域 
 	C_AREA_1 = RuleClick(roi_front=(628,314,108,137), roi_back=(0,0,100,100), name="area_1")
+	# 探查底部队伍预设
+	C_BF_LOADOUT_OPEN = RuleClick(roi_front=(940,559,47,40), roi_back=(940,559,47,40), name="bf_loadout_open")
+	# 探查预设面板左上方空白
+	C_BF_LOADOUT_DISMISS = RuleClick(roi_front=(557,111,32,27), roi_back=(557,111,32,27), name="bf_loadout_dismiss")
+	# 结契底部队伍预设
+	C_BALL_LOADOUT_OPEN = RuleClick(roi_front=(767,559,47,40), roi_back=(767,559,47,40), name="ball_loadout_open")
+	# 结契预设面板左侧空白
+	C_BALL_LOADOUT_DISMISS = RuleClick(roi_front=(365,481,28,25), roi_back=(365,481,28,25), name="ball_loadout_dismiss")
 
 
 	# Image Rule Assets

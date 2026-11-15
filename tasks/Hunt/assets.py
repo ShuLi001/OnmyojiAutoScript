@@ -38,5 +38,7 @@ class HuntAssets:
 	I_NW_CHALLAGE = RuleImage(roi_front=(306,590,171,63), roi_back=(306,590,171,63), threshold=0.8, method="Template matching", file="./tasks/Hunt/netherworld/netherworld_nw_challage.png")
 	# 今日已挑战 
 	I_NW_DONE = RuleImage(roi_front=(308,600,156,41), roi_back=(308,600,156,41), threshold=0.9, method="Template matching", file="./tasks/Hunt/netherworld/netherworld_nw_done.png")
+	# 阴界之门详情左下方的队伍预设图标
+	I_NW_LOADOUT_ENTRY = RuleImage(roi_front=(151,596,36,36), roi_back=(132,579,75,68), threshold=0.9, method="Template matching", file="./tasks/Hunt/netherworld/netherworld_nw_loadout_entry.png")
 
 

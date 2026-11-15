@@ -5,9 +5,7 @@ from pydantic import BaseModel, Field
 from enum import Enum
 
 from tasks.Component.config_scheduler import Scheduler
-from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
-from tasks.Component.config_base import ConfigBase
-from tasks.Component.SwitchSoul.switch_soul_config import SwitchSoulConfig
+from tasks.RealmRaid.loadout_config import RaidBattleConfig, RaidLoadoutTaskConfig
 
 class AttackNumber(str, Enum):
     NINE = 'nine'
@@ -26,11 +24,10 @@ class RaidConfig(BaseModel):
     three_refresh: bool = Field(title='Three Refresh', default=False, description='three_refresh_help')
     when_attack_fail: WhenAttackFail = Field(title='WhenAttackFail', default=WhenAttackFail.REFRESH, description='when_attack_fail_help')
 
-class RealmRaid(ConfigBase):
+class RealmRaid(RaidLoadoutTaskConfig):
     scheduler: Scheduler = Field(default_factory=Scheduler)
     raid_config: RaidConfig = Field(default_factory=RaidConfig)
-    general_battle_config: GeneralBattleConfig = Field(default_factory=GeneralBattleConfig)
-    switch_soul_config: SwitchSoulConfig = Field(default_factory=SwitchSoulConfig)
+    general_battle_config: RaidBattleConfig = Field(default_factory=RaidBattleConfig)
 
 
 

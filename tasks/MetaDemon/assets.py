@@ -46,10 +46,12 @@ class MetaDemonAssets:
 	I_MD_LOADOUT_GEAR = RuleImage(roi_front=(1220,430,38,37), roi_back=(1208,418,62,60), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_gear.png")
 	# 超鬼王右侧阵容栏的旧齿轮图标
 	I_MD_LOADOUT_GEAR_LEGACY = RuleImage(roi_front=(1220,430,38,37), roi_back=(1208,418,62,60), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_gear_legacy.png")
-	# 超鬼王快捷阵容出战锚点
+	# 超鬼王目标阵容可出战时的按钮
 	I_MD_LOADOUT_FIGHT = RuleImage(roi_front=(758,556,118,43), roi_back=(0,0,1280,720), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_fight.png")
-	# 预设人数不足时的面板锚点
+	# 目标阵容人数不足时的提示
 	I_MD_LOADOUT_INCOMPLETE = RuleImage(roi_front=(663,573,318,20), roi_back=(0,0,1280,720), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_incomplete.png")
+	# 超鬼王快捷阵容面板右下边框
+	I_MD_LOADOUT_PANEL_BORDER = RuleImage(roi_front=(995,587,55,26), roi_back=(987,579,71,42), threshold=0.9, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_panel_border.png")
 	# 出战时自动装配御魂的确定按钮
 	I_MD_LOADOUT_CONFIRM = RuleImage(roi_front=(664,407,180,65), roi_back=(638,386,232,107), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_loadout_confirm.png")
 	# 门票掉落弹窗今日已获得裂变之眼文字

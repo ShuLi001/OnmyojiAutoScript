@@ -13,8 +13,7 @@ from tasks.GameUi.game_ui import GameUi
 from tasks.GameUi.page import page_realm_raid
 from tasks.RealmRaid.assets import RealmRaidAssets
 from tasks.RealmRaid.config import RealmRaid, AttackNumber, WhenAttackFail
-from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
-from tasks.RealmRaid.page import page_shikigami_records
+from tasks.RealmRaid.quick_loadout import RaidQuickLoadout
 
 
 from module.logger import logger
@@ -24,7 +23,9 @@ from module.atom.image import RuleImage
 from module.atom.click import RuleClick
 
 
-class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RealmRaidAssets):
+class ScriptTask(GeneralBattle, GameUi, RaidQuickLoadout, RealmRaidAssets):
+    LOADOUT_TASK_NAME = '个人突破'
+    RAID_PAGE_CHECK = GameUi.I_CHECK_REALM_RAID
     medal_grid: ImageGrid = None
     init_tickets: int = -1
 
@@ -49,18 +50,6 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RealmRaidAssets):
             self.set_next_run(task='RealmRaid', success=False, finish=True)
             raise TaskEnd
 
-        # 票数足够，现在开始进行御魂切换
-        if con.switch_soul_config.enable:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul(con.switch_soul_config.switch_group_team)
-                
-        if con.switch_soul_config.enable_switch_by_name:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul_by_name(con.switch_soul_config.group_name, con.switch_soul_config.team_name)
-            
-        # 切换完成后，必须返回突破页面
-        self.goto_page(page_realm_raid)
-
         # 有呱太活动的时候第一次进入还会 出现一个弹窗
         self.screenshot()
         if self.appear(self.I_FROG_RAID):
@@ -71,6 +60,10 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RealmRaidAssets):
                     break
                 if self.appear_then_click(self.I_FROG_RAID, interval=1):
                     continue
+        if not self.apply_raid_loadout(con.general_battle_config):
+            self.goto_page(page_exploration)
+            self.set_next_run(task='RealmRaid', success=False, finish=True)
+            raise TaskEnd
         # 判断是不是锁定阵容
         self.ensure_lock(con.general_battle_config.lock_team_enable)
         # 判断是否是呱太活动

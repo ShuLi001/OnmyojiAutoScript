@@ -1,14 +1,12 @@
 # This Python file uses the following encoding: utf-8
 # @author runhey
 # github https://github.com/runhey
-from pydantic import BaseModel, Field
+from pydantic import Field
 from enum import Enum
-from datetime import datetime, time
 
 from tasks.Component.config_scheduler import Scheduler
 from tasks.Component.config_base import ConfigBase, Time
-from tasks.Component.SwitchSoul.switch_soul_config import SwitchSoulConfig
-from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
+from tasks.Component.QuickLoadout.dungeon_config import DungeonBattleConfig, DungeonLoadoutTaskConfig
 
 class GoryouClass(str, Enum):
     RANDOM = '随机',
@@ -26,9 +24,14 @@ class GoryouConfig(ConfigBase):
     goryou_class: GoryouClass = Field(default=GoryouClass.RANDOM, description='goryou_class_help')
 
 
-class GoryouRealm(ConfigBase):
+class GoryouBattleConfig(DungeonBattleConfig):
+    enable_dungeon_loadout: bool = Field(default=False, description='enable_goryou_loadout_help')
+
+
+class GoryouRealm(DungeonLoadoutTaskConfig):
+    LEGACY_DUNGEON_GROUP = 'goryou_config'
+
     scheduler: Scheduler = Field(default_factory=Scheduler)
     goryou_config: GoryouConfig = Field(default_factory=GoryouConfig)
-    general_battle_config: GeneralBattleConfig = Field(default_factory=GeneralBattleConfig)
-    switch_soul_config: SwitchSoulConfig = Field(default_factory=SwitchSoulConfig)
+    general_battle_config: GoryouBattleConfig = Field(default_factory=GoryouBattleConfig)
 

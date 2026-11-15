@@ -43,6 +43,10 @@ class QuickLoadoutLayout:
     group_swipe_down: RuleSwipe
     preset_swipe_to_top: RuleSwipe
     preset_swipe_down: RuleSwipe
+    scale: float = 1.0
+
+    def pixels(self, value: int) -> int:
+        return round(value * self.scale)
 
 
 class QuickLoadout(BaseTask, SwitchSoulAssets):
@@ -208,23 +212,31 @@ class QuickLoadout(BaseTask, SwitchSoulAssets):
             return 1.0
         return difflib.SequenceMatcher(None, actual, expected).ratio()
 
-    def _build_quick_loadout_layout(self, fight_anchor: RuleImage) -> QuickLoadoutLayout:
-        anchor_x, anchor_y = fight_anchor.roi_front[:2]
-        dx, dy, panel_width, panel_height = self.PANEL_FROM_FIGHT
+    def _build_quick_loadout_layout(self, anchor: RuleImage,
+                                    panel_from_anchor: tuple[int, int, int, int] | None = None,
+                                    *, scale: float = 1.0) -> QuickLoadoutLayout:
+        anchor_x, anchor_y = anchor.roi_front[:2]
+        dx, dy, panel_width, panel_height = panel_from_anchor or self.PANEL_FROM_FIGHT
         panel = anchor_x + dx, anchor_y + dy, panel_width, panel_height
         x, y, width, height = panel
         if x < 0 or y < 0 or x + width > 1280 or y + height > 720:
             raise ValueError(f'Quick loadout panel is outside screen: {panel}')
 
-        group_roi = self._offset_roi(panel, self.GROUP_OCR_ROI)
-        preset_roi = self._offset_roi(panel, self.PRESET_OCR_ROI)
+        def region(roi):
+            return self._offset_roi(panel, tuple(round(value * scale) for value in roi))
+
+        group_roi = region(self.GROUP_OCR_ROI)
+        preset_roi = region(self.PRESET_OCR_ROI)
         group_ocr = QuickLoadoutOcr(roi=group_roi, area=group_roi, mode='Full', method='Default', keyword='', name='quick_loadout_group_name')
         preset_ocr = QuickLoadoutOcr(roi=preset_roi, area=preset_roi, mode='Full', method='Default', keyword='', name='quick_loadout_preset_name')
-        group_swipe_to_top = RuleSwipe(roi_front=(x + 55, y + 105, 25, 20), roi_back=(x + 55, y + 285, 25, 20), mode='default', name='quick_loadout_group_to_top')
-        group_swipe_down = RuleSwipe(roi_front=(x + 55, y + 285, 25, 20), roi_back=(x + 55, y + 105, 25, 20), mode='default', name='quick_loadout_group_down')
-        preset_swipe_to_top = RuleSwipe(roi_front=(x + 355, y + 105, 30, 20), roi_back=(x + 355, y + 280, 30, 20), mode='default', name='quick_loadout_preset_to_top')
-        preset_swipe_down = RuleSwipe(roi_front=(x + 355, y + 280, 30, 20), roi_back=(x + 355, y + 105, 30, 20), mode='default', name='quick_loadout_preset_down')
-        return QuickLoadoutLayout(panel, group_ocr, preset_ocr, group_swipe_to_top, group_swipe_down, preset_swipe_to_top, preset_swipe_down)
+        group_top, group_bottom = region((55, 105, 25, 20)), region((55, 285, 25, 20))
+        preset_top, preset_bottom = region((355, 105, 30, 20)), region((355, 280, 30, 20))
+        group_swipe_to_top = RuleSwipe(roi_front=group_top, roi_back=group_bottom, mode='default', name='quick_loadout_group_to_top')
+        group_swipe_down = RuleSwipe(roi_front=group_bottom, roi_back=group_top, mode='default', name='quick_loadout_group_down')
+        preset_swipe_to_top = RuleSwipe(roi_front=preset_top, roi_back=preset_bottom, mode='default', name='quick_loadout_preset_to_top')
+        preset_swipe_down = RuleSwipe(roi_front=preset_bottom, roi_back=preset_top, mode='default', name='quick_loadout_preset_down')
+        return QuickLoadoutLayout(panel, group_ocr, preset_ocr, group_swipe_to_top, group_swipe_down,
+                                 preset_swipe_to_top, preset_swipe_down, scale)
 
     def _open_quick_loadout(self, entry: RuleImage, fight_anchor: RuleImage) -> bool:
         logger.info('Open quick loadout panel')
@@ -324,7 +336,7 @@ class QuickLoadout(BaseTask, SwitchSoulAssets):
         return None
 
     def _group_click_point(self, layout: QuickLoadoutLayout, y: int) -> tuple[int, int]:
-        return layout.panel[0] + self.GROUP_CLICK_X, y
+        return layout.panel[0] + layout.pixels(self.GROUP_CLICK_X), y
 
     def _select_group(self, layout: QuickLoadoutLayout, config: QuickLoadoutConfig) -> bool:
         self._rewind_list(layout.group_ocr, layout.group_swipe_to_top, self.MAX_GROUP_SWIPES)

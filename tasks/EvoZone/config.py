@@ -4,12 +4,11 @@
 from pydantic import BaseModel, Field
 from enum import Enum
 from datetime import datetime, time
-from tasks.Component.SwitchSoul.switch_soul_config import SwitchSoulConfig
 
 from tasks.Component.config_scheduler import Scheduler
 from tasks.Component.config_base import ConfigBase, Time
 from tasks.Component.GeneralInvite.config_invite import InviteConfig
-from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
+from tasks.Component.QuickLoadout.dungeon_config import DungeonBattleConfig, DungeonLoadoutTaskConfig
 
 
 class UserStatus(str, Enum):
@@ -51,11 +50,12 @@ class EvoZoneConfig(ConfigBase):
     # 是否开启觉醒加成
     soul_buff_enable: bool = Field(default=False, description='是否开启觉醒加成')
 
-class EvoZone(ConfigBase):
+class EvoZone(DungeonLoadoutTaskConfig):
+    LEGACY_DUNGEON_GROUP = 'evo_zone_config'
+
     scheduler: Scheduler = Field(default_factory=Scheduler)
     evo_zone_config: EvoZoneConfig = Field(default_factory=EvoZoneConfig)
     invite_config: InviteConfig = Field(default_factory=InviteConfig)
-    general_battle_config: GeneralBattleConfig = Field(default_factory=GeneralBattleConfig)
-    switch_soul_config: SwitchSoulConfig = Field(default_factory=SwitchSoulConfig)
+    general_battle_config: DungeonBattleConfig = Field(default_factory=DungeonBattleConfig)
 
 

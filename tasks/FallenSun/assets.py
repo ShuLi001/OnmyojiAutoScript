@@ -17,10 +17,10 @@ class FallenSunAssets:
 	I_FORM_TEAM = RuleImage(roi_front=(961,598,94,58), roi_back=(930,562,165,158), threshold=0.8, method="Template matching", file="./tasks/FallenSun/f/f_form_team.png")
 	# description 
 	I_FALLEN_SUN_FIRE = RuleImage(roi_front=(1145,596,92,47), roi_back=(1110,562,155,158), threshold=0.8, method="Template matching", file="./tasks/FallenSun/f/f_fallen_sun_fire.png")
-	# description 
-	I_FALLEN_SUN_UNLOCK = RuleImage(roi_front=(704,658,21,28), roi_back=(646,637,192,83), threshold=0.8, method="Template matching", file="./tasks/FallenSun/f/f_fallen_sun_unlock.png")
-	# description 
-	I_FALLEN_SUN_LOCK = RuleImage(roi_front=(705,659,19,26), roi_back=(661,641,169,79), threshold=0.6, method="Template matching", file="./tasks/FallenSun/f/f_fallen_sun_lock.png")
+	# 日轮之陨阵容未锁定（与八岐大蛇相同的开锁图标）
+	I_FALLEN_SUN_UNLOCK = RuleImage(roi_front=(699,652,32,35), roi_back=(689,643,52,52), threshold=0.8, method="Template matching", file="./tasks/FallenSun/f/f_fallen_sun_unlock.png")
+	# 日轮之陨阵容已锁定（紫底闭锁图标）
+	I_FALLEN_SUN_LOCK = RuleImage(roi_front=(699,652,32,35), roi_back=(689,643,52,52), threshold=0.8, method="Template matching", file="./tasks/FallenSun/f/f_fallen_sun_lock.png")
 	# 小小宠物，发现宝藏 
 	I_PET_PRESENT = RuleImage(roi_front=(873,184,62,147), roi_back=(873,184,62,147), threshold=0.8, method="Template matching", file="./tasks/FallenSun/f/f_pet_present.png")
 

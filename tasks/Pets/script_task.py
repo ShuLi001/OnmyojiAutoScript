@@ -49,8 +49,8 @@ class ScriptTask(OrochiScriptTask, PetsAssets):
         self.limit_count = 1
         self.limit_time = timedelta(hours=10)
         self.goto_page(page_orochi)
-        if self.conf.enable_switch_layer_soul:
-            self.switch_orochi_souls()
+        if self.conf.enable_switch_layer_soul and not self.switch_orochi_souls():
+            return
         self.run_alone()
 
 if __name__ == '__main__':

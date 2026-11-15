@@ -1,0 +1,14 @@
+[
+  {
+    "itemName": "raid_loadout_open",
+    "roiFront": "1208,535,42,40",
+    "roiBack": "1208,535,42,40",
+    "description": "点击个人突破和寮突破右侧的队伍预设"
+  },
+  {
+    "itemName": "raid_loadout_dismiss",
+    "roiFront": "352,83,57,22",
+    "roiBack": "352,83,57,22",
+    "description": "点击预设窗口外的标题栏空白处关闭"
+  }
+]

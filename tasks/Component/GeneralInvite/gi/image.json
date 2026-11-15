@@ -308,8 +308,8 @@
   {
     "itemName": "i_no_default",
     "imageName": "gi_i_no_default.png",
-    "roiFront": "542,343,36,35",
-    "roiBack": "542,343,36,35",
+    "roiFront": "544,344,35,35",
+    "roiBack": "526,330,70,65",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "不勾选 默认邀请"
@@ -317,26 +317,35 @@
   {
     "itemName": "i_default",
     "imageName": "gi_i_default.png",
-    "roiFront": "541,342,41,39",
-    "roiBack": "541,342,41,39",
+    "roiFront": "544,344,35,35",
+    "roiBack": "526,330,70,65",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "勾选 默认邀请"
   },
   {
-    "itemName": "gi_cancel",
-    "imageName": "gi_gi_cancel.png",
-    "roiFront": "438,407,171,55",
-    "roiBack": "438,407,171,55",
+    "itemName": "gi_invite_again_title",
+    "imageName": "gi_gi_invite_again_title.png",
+    "roiFront": "470,286,341,37",
+    "roiBack": "427,247,428,135",
     "method": "Template matching",
     "threshold": 0.8,
-    "description": "description"
+    "description": "续邀弹窗标题：是否邀请队友继续进行战斗"
+  },
+  {
+    "itemName": "gi_cancel",
+    "imageName": "gi_gi_cancel.png",
+    "roiFront": "436,406,180,66",
+    "roiBack": "404,373,246,133",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "description": "续邀弹窗取消按钮"
   },
   {
     "itemName": "gi_sure",
     "imageName": "gi_gi_sure.png",
-    "roiFront": "670,402,175,60",
-    "roiBack": "670,402,175,60",
+    "roiFront": "664,407,180,65",
+    "roiBack": "630,372,248,134",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "队长邀请 确定"

@@ -6,7 +6,7 @@
 from enum import Enum
 from module.atom.click import RuleClick
 
-from pydantic import BaseModel, Field
+from pydantic import Field, model_validator
 
 from module.base.timer import Timer
 from module.config.weekly_schedule import WeeklyRunTimes
@@ -285,12 +285,12 @@ class ProcessManage(ConfigBase):
     strategy_general: str = Field(default='30', description='副将战斗策略,同首领')
     # 精英策略
     strategy_elite: str = Field(default='4380000', description='精英战斗策略,同首领')
-    # 是否启用切换御魂
-    enable_switch_soul_in_as: bool = Field(default=False)
-    # 是否同步切换预设
-    enable_switch_preset_in_as: bool = Field(default=False)
+    enable_switch_loadout_in_as: bool = Field(
+        default=False,
+        description='每个目标首次挑战前切换阵容和御魂，同一目标补打时沿用。填写组号,队伍号（如6,1）或分组名称,队伍名称；留空或填写-1,-1则沿用当前阵容',
+    )
     # 首领预设
-    preset_boss: str = Field(default='6,1', description='例6,1，同其他通用预设配置')
+    preset_boss: str = Field(default='6,1')
     # 副将预设
     preset_general: str = Field(default='6,2')
     # 精英预设
@@ -304,6 +304,28 @@ class ProcessManage(ConfigBase):
     # 难度
     difficulty: AbyssShadowsDifficulty = Field(default=AbyssShadowsDifficulty.EASY)
 
+
+    @model_validator(mode='before')
+    @classmethod
+    def migrate_loadout_switches(cls, data):
+        if isinstance(data, dict) and 'enable_switch_loadout_in_as' not in data:
+            if any(data.get(key) is True for key in ('enable_switch_soul_in_as', 'enable_switch_preset_in_as')):
+                return {**data, 'enable_switch_loadout_in_as': True}
+        return data
+
+    def get_lineup(self, enemy_type: EnemyType) -> tuple[int, int] | tuple[str, str] | None:
+        value = getattr(self, f'preset_{enemy_type.value.lower()}').strip()
+        if not value:
+            return None
+        parts = [part.strip() for part in value.replace('，', ',').split(',')]
+        if len(parts) != 2 or not all(parts):
+            raise ValueError('阵容须填写组号,队伍号或分组名称,队伍名称')
+        group, team = parts
+        if (group, team) == ('-1', '-1'):
+            return None
+        if group.isdecimal() and team.isdecimal():
+            return int(group), int(team)
+        return group, team
 
     def is_need_mark_main(self, enemy_type: EnemyType) -> bool:
         strategy = self.mark_main  # 获取 MarkMainConfig 枚举值

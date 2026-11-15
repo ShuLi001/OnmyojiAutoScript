@@ -7,13 +7,17 @@ from datetime import time, datetime, timedelta
 from tasks.Sougenbi.assets import SougenbiAssets
 from tasks.Sougenbi.config import SougenbiConfig, SougenbiClass
 from tasks.Component.GeneralBattle.general_battle import GeneralBattle
-from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
+from tasks.Component.QuickLoadout.dungeon import DungeonQuickLoadout
 from tasks.GameUi.game_ui import GameUi
-from tasks.GameUi.page import any_of, page_main, page_shikigami_records, page_soul_zones
+from tasks.GameUi.page import any_of, page_main, page_soul_zones
 from module.logger import logger
 from module.exception import TaskEnd
 
-class ScriptTask(GeneralBattle, GameUi, SwitchSoul, SougenbiAssets):
+class ScriptTask(GeneralBattle, GameUi, DungeonQuickLoadout, SougenbiAssets):
+    LOADOUT_TASK_NAME = '业原火'
+
+    def _activity_loadout_entry_visible(self) -> bool:
+        return self.appear(self.I_S_CHECK_SOUGENBI) and self.appear(self.LOADOUT_ENTRY)
 
     def run(self):
         con = self.config.sougenbi
@@ -33,13 +37,6 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, SougenbiAssets):
             if s_con.buff_exp_100_click:
                 self.exp_100(True)
             self.close_buff()
-
-        if con.switch_soul_config.enable:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul(con.switch_soul_config.switch_group_team)
-        if con.switch_soul_config.enable_switch_by_name:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul_by_name(con.switch_soul_config.group_name, con.switch_soul_config.team_name)
 
         self.goto_page(page_soul_zones)
         while 1:
@@ -76,8 +73,9 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, SougenbiAssets):
             if self.click(click_target, interval=0.5):
                 pass
 
-        # 开始循环
-        while 1:
+        lineup_ready = self.apply_dungeon_loadout(con.general_battle_config.get_lineup, lambda: None, member=False)
+        # 阵容未应用时仍走收尾，关闭本轮开启的加成。
+        while lineup_ready:
             self.screenshot()
 
             if not self.appear(self.I_S_CHECK_SOUGENBI):
@@ -116,7 +114,7 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, SougenbiAssets):
                 self.exp_100(False)
             self.close_buff()
 
-        self.set_next_run("Sougenbi", success=True, finish=True)
+        self.set_next_run("Sougenbi", success=lineup_ready, finish=True)
         raise TaskEnd
 
 

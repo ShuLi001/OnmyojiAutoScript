@@ -43,6 +43,10 @@ class AreaBossAssets:
 	C_AB_BOSS_REWARD_PHOTO_MINUS_1 = RuleClick(roi_front=(940,585,95,70), roi_back=(940,585,95,70), name="ab_boss_reward_photo_minus_1")
 	# 当前选择 的极地鬼层数 
 	C_AB_JI_FLOOR_SELECTED = RuleClick(roi_front=(380,120,70,30), roi_back=(380,120,70,30), name="ab_ji_floor_selected")
+	# 点击地域鬼王详情右侧的整个队伍预设图标
+	C_AB_LOADOUT_OPEN = RuleClick(roi_front=(1176,348,65,65), roi_back=(1176,348,65,65), name="ab_loadout_open")
+	# 点击预设窗口右侧的空白处
+	C_AB_LOADOUT_DISMISS = RuleClick(roi_front=(1187,439,15,12), roi_back=(1187,439,15,12), name="ab_loadout_dismiss")
 
 
 	# Image Rule Assets
@@ -92,6 +96,10 @@ class AreaBossAssets:
 	I_AB_GROUP_RANK_NONE = RuleImage(roi_front=(890,415,95,85), roi_back=(890,415,95,85), threshold=0.8, method="Template matching", file="./tasks/AreaBoss/res/ab_rank_none.png")
 	# 挑战数进度条 
 	I_AB_NUM_CHALLENGE_RAIL = RuleImage(roi_front=(895,639,14,27), roi_back=(895,639,14,27), threshold=0.8, method="Template matching", file="./tasks/AreaBoss/res/ab_num_challenge_rail.png")
+	# 地域鬼王详情右侧队伍预设图标中心
+	I_AB_LOADOUT_ENTRY = RuleImage(roi_front=(1190,358,36,36), roi_back=(1180,255,56,149), threshold=0.9, method="Template matching", file="./tasks/AreaBoss/res/res_ab_loadout_entry.png")
+	# 全队正在使用预设御魂和阴阳术提示
+	I_AB_LOADOUT_ALREADY_EQUIPPED = RuleImage(roi_front=(454,226,372,28), roi_back=(432,218,420,44), threshold=0.85, method="Template matching", file="./tasks/AreaBoss/res/res_ab_loadout_already_equipped.png")
 
 
 	# Ocr Rule Assets

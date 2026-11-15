@@ -12,12 +12,13 @@ from module.base.timer import Timer
 from module.exception import TaskEnd
 from module.logger import logger
 from tasks.BondlingFairyland.assets import BondlingFairylandAssets
-from tasks.BondlingFairyland.config import BondlingMode, BondlingClass, BondlingSwitchSoul, BondlingConfig, UserStatus
+from tasks.BondlingFairyland.config import BondlingMode, BondlingClass, BondlingConfig, UserStatus
+from tasks.BondlingFairyland.quick_loadout import BondlingQuickLoadout
 from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
 from tasks.Component.GeneralBattle.general_battle import BattleAction, BattleContext, ExitMatcher, GeneralBattle
 from tasks.Component.GeneralInvite.general_invite import GeneralInvite
 from tasks.Component.GeneralRoom.general_room import GeneralRoom
-from tasks.Component.SwitchSoul.switch_soul import SwitchSoul, switch_parser
+from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
 from tasks.GameUi.default_pages import page_battle_result, random_click
 from tasks.GameUi.game_ui import GameUi
 from tasks.GameUi.matcher import any_of
@@ -90,6 +91,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
 
     def run(self):
         cong = self.config.bondling_fairyland
+        self._preset_phase = None
 
         if cong.bondling_config.check_enable:
             logger.hr('第一步, 检查契忆数量', 2)
@@ -106,11 +108,9 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
                 self.set_next_run(task='BondlingFairyland', finish=True, success=True)
                 raise TaskEnd
             logger.info(f'契忆数量: {cu} 小于 {MAX_COUNT}, 继续任务')
-        logger.hr('第二步, 切换御魂', 2)
-        self.switch_soul()
-        logger.hr('第三步, 前往契灵主界面', 2)
+        logger.hr('第二步, 前往契灵主界面', 2)
         self.goto_page(page_bondling_fairyland)
-        logger.hr('第四步, 开始战斗准备', 2)
+        logger.hr('第三步, 开始战斗准备', 2)
         self.current_count = 0
         self.limit_count = cong.bondling_config.limit_count  # 默认limit_count值
         logger.hr('Goto bondling area')
@@ -259,6 +259,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
 
     def run_member(self):
         logger.hr('Start run member', 2)
+        self._prepare_member_souls()
         # 开始等待队长拉人
         wait_time = self.config.bondling_fairyland.invite_config.wait_time
         wait_timer = Timer(wait_time.minute * 60)
@@ -401,7 +402,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
             for i in range(3):
                 if self.appear_then_click(self.I_BUY_PLUS, interval=1):
                     sleep(0.5)
-            if self.appear_then_click(self.I_GI_SURE, interval=1):
+            if self.appear(self.I_STONE_SURE) and self.appear_then_click(self.I_UI_CONFIRM, interval=1):
                 continue
             if self.appear_then_click(self.I_STONE_SURE, interval=1):
                 continue
@@ -415,6 +416,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
         (3) 打满五只球了，(探查界面)返回True
         (4) 打满对应limit_cnt次, (探查界面)返回True
         """
+        self._apply_page_preset(search=True)
         self.lock_team()
         while 1:
             # 检查是不是在探查界面，
@@ -450,6 +452,7 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
         (4) 捕获成功，返回True (退出页面是捕获的页面)
         """
         logger.hr('Start run catch', 2)
+        self._apply_page_preset(search=False)
         self.lock_team()
 
         def check_ball_number():
@@ -741,33 +744,43 @@ class ScriptTask(GameUi, GeneralInvite, GeneralRoom, GeneralBattle, SwitchSoul, 
         gbc.random_click_swipt_enable = False
         return gbc
 
-    def switch_soul(self):
-        def do_switch_soul(ts: str, g: str | int, te: str | int):
-            if ts is None:
-                raise ValueError(f'Invalid switch soul config on {bondling_config.bondling_stone_class.value}')
-            if ts == 'int':
-                self.run_switch_soul((g, te))
-            if ts == 'str':
-                self.run_switch_soul_by_name(g, te)
+    def _preset_failed(self):
+        self.goto_page(page_main)
+        self.set_next_run(task='BondlingFairyland', finish=False, success=False)
+        raise TaskEnd
 
+    def _apply_page_preset(self, *, search: bool):
+        if self._preset_phase == search:
+            return
         cong = self.config.bondling_fairyland
         if not cong.bondling_switch_soul.enable:
             return
-        bondling_config = cong.bondling_config
-        bondling_switch_soul = cong.bondling_switch_soul
+        bondling = None if search else cong.bondling_config.bondling_stone_class
+        loadout = BondlingQuickLoadout(self, search=search)
+        if not loadout.apply_dungeon_loadout(
+                lambda: cong.bondling_switch_soul.get_lineup(bondling), lambda: None, member=False):
+            self._preset_failed()
+        self._preset_phase = search
+
+    def _prepare_member_souls(self):
+        # 队员接受邀请直接进房，没有结契详情页可用。
+        cong = self.config.bondling_fairyland
+        try:
+            lineup = cong.bondling_switch_soul.get_lineup(cong.bondling_config.bondling_stone_class)
+            if lineup is None:
+                return
+            group, team = lineup
+            if isinstance(group, int) and not (1 <= group <= 7 and 1 <= team <= 4):
+                raise ValueError('队员式神录仅支持第 1–7 组的前 4 队')
+        except ValueError as error:
+            logger.warning(f'契灵结契队员预设配置无效：{error}')
+            self._preset_failed()
         self.goto_page(page_shikigami_records)
-        # 单刷探查配置
-        if bondling_config.bondling_mode == BondlingMode.MODE1:
-            type_str, (group, team) = bondling_switch_soul.get_switch_by_name('search_switch')
-            do_switch_soul(type_str, group, team)
-            return
-        # 刷契灵配置
-        type_str, (group, team) = bondling_switch_soul.get_switch_by_enum(bondling_config.bondling_stone_class)
-        do_switch_soul(type_str, group, team)
-        # 启用了刷契灵时开启探查且是单人模式
-        if bondling_config.bondling_search_enable and bondling_config.user_status == UserStatus.ALONE:
-            type_str, (group, team) = bondling_switch_soul.get_switch_by_name('search_switch')
-            do_switch_soul(type_str, group, team)
+        if isinstance(group, int):
+            self.run_switch_soul(lineup)
+        else:
+            self.run_switch_soul_by_name(group, team)
+        self.goto_page(page_bondling_fairyland)
 
 
 if __name__ == '__main__':

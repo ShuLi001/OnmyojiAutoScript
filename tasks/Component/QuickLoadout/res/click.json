@@ -1,0 +1,14 @@
+[
+  {
+    "itemName": "dungeon_loadout_open",
+    "roiFront": "752,572,47,41",
+    "roiBack": "752,572,47,41",
+    "description": "点击觉醒和御魂底部的队伍预设"
+  },
+  {
+    "itemName": "dungeon_loadout_dismiss",
+    "roiFront": "1036,443,46,33",
+    "roiBack": "1036,443,46,33",
+    "description": "点击预设窗口右侧的空白处"
+  }
+]

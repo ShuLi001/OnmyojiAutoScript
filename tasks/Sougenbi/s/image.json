@@ -11,8 +11,8 @@
   {
     "itemName": "s_team_lock",
     "imageName": "s_s_team_lock.png",
-    "roiFront": "703,657,23,28",
-    "roiBack": "688,648,52,54",
+    "roiFront": "699,652,32,35",
+    "roiBack": "689,643,52,52",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "description"
@@ -20,8 +20,8 @@
   {
     "itemName": "s_team_unlock",
     "imageName": "s_s_team_unlock.png",
-    "roiFront": "704,658,22,26",
-    "roiBack": "688,648,55,60",
+    "roiFront": "699,652,32,35",
+    "roiBack": "689,643,52,52",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "description"

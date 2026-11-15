@@ -11,6 +11,7 @@ from module.atom.image import RuleImage
 
 from module.base.timer import Timer
 from tasks.GameUi.assets import GameUiAssets
+from tasks.GameUi.matcher import all_of
 from tasks.base_task import BaseTask
 from tasks.Component.GeneralInvite.assets import GeneralInviteAssets
 from tasks.Component.GeneralInvite.config_invite import InviteConfig, FindMode
@@ -39,6 +40,7 @@ class RoomType(str, Enum):
 
 
 class GeneralInvite(BaseTask, GeneralInviteAssets):
+    INVITE_AGAIN_POPUP = all_of(GeneralInviteAssets.I_GI_INVITE_AGAIN_TITLE, GeneralInviteAssets.I_GI_SURE)
     timer_invite = None
     timer_wait = None
     timer_emoji = None  # 等待期间如果没有操作的话，可能会导致长时间无响应报错
@@ -206,17 +208,17 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
             self.screenshot()
             if timeout_timer.reached():
                 break
-            if not self.is_in_room() and \
-                    not self.appear_then_click(GeneralInviteAssets.I_GI_SURE, interval=0.8) and \
-                    not self.appear(self.I_BACK_YELLOW):
+            if self.appear(GeneralBattleAssets.I_GB_CHECK_TEAM_EXIT):
+                if not self.appear_then_click(self.I_UI_CONFIRM, interval=0.5):
+                    self.appear_then_click(self.I_UI_CONFIRM_SAMLL, interval=0.5)
+                continue
+            if not self.is_in_room(False) and not self.appear(self.I_BACK_YELLOW):
                 return True
-            if self.appear_then_click(GeneralInviteAssets.I_GI_SURE, interval=0.5):
+            if self.appear_then_click(self.I_BACK_YELLOW, interval=0.8):
+                self.wait_until_appear(GeneralBattleAssets.I_GB_CHECK_TEAM_EXIT, wait_time=0.8)
                 continue
-            if not self.appear(GeneralInviteAssets.I_GI_SURE) and self.appear_then_click(self.I_BACK_YELLOW, interval=0.8):
-                self.wait_until_appear(GeneralInviteAssets.I_GI_SURE, wait_time=0.8)
-                continue
-            if not self.appear(GeneralInviteAssets.I_GI_SURE) and self.appear_then_click(self.I_BACK_YELLOW_SEA, interval=0.8):
-                self.wait_until_appear(GeneralInviteAssets.I_GI_SURE, wait_time=0.8)
+            if self.appear_then_click(self.I_BACK_YELLOW_SEA, interval=0.8):
+                self.wait_until_appear(GeneralBattleAssets.I_GB_CHECK_TEAM_EXIT, wait_time=0.8)
                 continue
         return False
 
@@ -577,14 +579,14 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
         # 判断是否进入界面
         while 1:
             self.screenshot()
-            if self.appear(self.I_GI_SURE):
+            if self.INVITE_AGAIN_POPUP.evaluate(self):
                 break
         # 如果勾选了默认邀请
         if default_invite:
             logger.info('Click default invite')
             while 1:
                 self.screenshot()
-                if self.appear(self.I_I_DEFAULT):
+                if not self.appear(self.I_GI_INVITE_AGAIN_TITLE) or self.appear(self.I_I_DEFAULT):
                     break
                 if self.appear_then_click(self.I_I_NO_DEFAULT, interval=1):
                     continue
@@ -592,7 +594,7 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
             logger.info('Click no default invite')
             while 1:
                 self.screenshot()
-                if self.appear(self.I_I_NO_DEFAULT):
+                if not self.appear(self.I_GI_INVITE_AGAIN_TITLE) or self.appear(self.I_I_NO_DEFAULT):
                     break
                 if self.appear_then_click(self.I_I_DEFAULT, interval=1):
                     continue
@@ -601,7 +603,7 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
         logger.info('Click invite ensure')
         while 1:
             self.screenshot()
-            if not self.appear(self.I_GI_SURE):
+            if not self.INVITE_AGAIN_POPUP.evaluate(self):
                 break
             if self.appear_then_click(self.I_GI_SURE):
                 continue
@@ -612,7 +614,7 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
         :param default_invite:
         :return:
         """
-        if not self.appear(self.I_GI_SURE):
+        if not self.INVITE_AGAIN_POPUP.evaluate(self):
             return False
 
         if default_invite:
@@ -621,7 +623,7 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
                 logger.info('Click default invite')
                 while 1:
                     self.screenshot()
-                    if self.is_in_room(False):
+                    if not self.appear(self.I_GI_INVITE_AGAIN_TITLE):
                         break
                     if self.appear(self.I_I_DEFAULT):
                         break
@@ -630,9 +632,7 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
         # 点击确认
         while 1:
             self.screenshot()
-            if self.is_in_room(False):
-                break
-            if not self.appear(self.I_GI_SURE):
+            if not self.INVITE_AGAIN_POPUP.evaluate(self):
                 break
             if self.appear_then_click(self.I_GI_SURE, interval=1):
                 continue
@@ -655,9 +655,7 @@ class GeneralInvite(BaseTask, GeneralInviteAssets):
             # https://github.com/runhey/OnmyojiAutoScript/issues/230
             if self.appear(GeneralBattleAssets.I_EXIT):
                 return False
-            if self.appear_then_click(self.I_I_NO_DEFAULT, interval=1):
-                continue
-            if self.appear_then_click(self.I_GI_SURE, interval=1):
+            if self.check_and_invite():
                 continue
             if self.appear_then_click(self.I_I_ACCEPT_DEFAULT, interval=1):
                 continue

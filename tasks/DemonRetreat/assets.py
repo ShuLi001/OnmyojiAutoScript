@@ -10,13 +10,22 @@ from module.atom.list import RuleList
 class DemonRetreatAssets: 
 
 
+	# Click Rule Assets
+	# 点击首领退治底部的队伍预设
+	C_DR_LOADOUT_OPEN = RuleClick(roi_front=(850,604,74,64), roi_back=(850,604,74,64), name="dr_loadout_open")
+	# 点击预设面板右侧的空白背景
+	C_DR_LOADOUT_DISMISS = RuleClick(roi_front=(1062,388,66,34), roi_back=(1062,388,66,34), name="dr_loadout_dismiss")
+
+
 	# Image Rule Assets
+	# 首领退治队伍预设面板右下边框
+	I_DR_LOADOUT_PANEL_BORDER = RuleImage(roi_front=(985,543,55,26), roi_back=(977,535,71,42), threshold=0.9, method="Template matching", file="./tasks/DemonRetreat/DemonRetreat/DemonRetreat_dr_loadout_panel_border.png")
 	# 神社 
 	I_SHRINE = RuleImage(roi_front=(870,624,65,61), roi_back=(870,624,65,61), threshold=0.8, method="Template matching", file="./tasks/DemonRetreat/DemonRetreat/DemonRetreat_shrine.png")
 	# 首领退治 
 	I_HUNT = RuleImage(roi_front=(698,228,122,78), roi_back=(661,164,187,165), threshold=0.8, method="Template matching", file="./tasks/DemonRetreat/DemonRetreat/DemonRetreat_hunt.png")
 	# 检查是否成功进入首领退治 
-	I_HUNT_CHECK = RuleImage(roi_front=(570,12,143,46), roi_back=(570,12,143,46), threshold=0.8, method="Template matching", file="./tasks/DemonRetreat/DemonRetreat/DemonRetreat_hunt_check.png")
+	I_HUNT_CHECK = RuleImage(roi_front=(570,12,143,46), roi_back=(562,4,159,62), threshold=0.8, method="Template matching", file="./tasks/DemonRetreat/DemonRetreat/DemonRetreat_hunt_check.png")
 	# description 
 	I_DEMON_GATHER = RuleImage(roi_front=(26,487,76,48), roi_back=(26,487,76,48), threshold=0.8, method="Template matching", file="./tasks/DemonRetreat/DemonRetreat/DemonRetreat_demon_gather.png")
 	# 非退治时间进行检查 

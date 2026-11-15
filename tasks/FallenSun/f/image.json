@@ -29,20 +29,20 @@
   {
     "itemName": "fallen_sun_unlock",
     "imageName": "f_fallen_sun_unlock.png",
-    "roiFront": "704,658,21,28",
-    "roiBack": "646,637,192,83",
+    "roiFront": "699,652,32,35",
+    "roiBack": "689,643,52,52",
     "method": "Template matching",
     "threshold": 0.8,
-    "description": "description"
+    "description": "日轮之陨阵容未锁定（与八岐大蛇相同的开锁图标）"
   },
   {
     "itemName": "fallen_sun_lock",
     "imageName": "f_fallen_sun_lock.png",
-    "roiFront": "705,659,19,26",
-    "roiBack": "661,641,169,79",
+    "roiFront": "699,652,32,35",
+    "roiBack": "689,643,52,52",
     "method": "Template matching",
-    "threshold": 0.6,
-    "description": "description"
+    "threshold": 0.8,
+    "description": "日轮之陨阵容已锁定（紫底闭锁图标）"
   },
   {
     "itemName": "pet_present",

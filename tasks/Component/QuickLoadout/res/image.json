@@ -1,0 +1,38 @@
+[
+  {
+    "itemName": "dungeon_equip_soul",
+    "imageName": "res_dungeon_equip_soul.png",
+    "roiFront": "874,164,28,28",
+    "roiBack": "874,164,28,28",
+    "method": "Template matching",
+    "threshold": 0.82,
+    "description": "队伍预设行右侧的装备御魂图标"
+  },
+  {
+    "itemName": "dungeon_loadout_entry",
+    "imageName": "res_dungeon_loadout_entry.png",
+    "roiFront": "750,575,52,39",
+    "roiBack": "738,563,76,63",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "觉醒和御魂底部的队伍预设图标"
+  },
+  {
+    "itemName": "dungeon_loadout_panel_border",
+    "imageName": "res_dungeon_loadout_panel_border.png",
+    "roiFront": "906,513,55,26",
+    "roiBack": "898,505,71,42",
+    "method": "Template matching",
+    "threshold": 0.9,
+    "description": "御魂和觉醒入口页队伍预设面板右下边框"
+  },
+  {
+    "itemName": "dungeon_battle_loadout_panel_border",
+    "imageName": "res_dungeon_battle_loadout_panel_border.png",
+    "roiFront": "649,678,68,32",
+    "roiBack": "641,670,84,48",
+    "method": "Template matching",
+    "threshold": 0.9,
+    "description": "御魂和觉醒战斗准备页队伍预设面板右下边框"
+  }
+]

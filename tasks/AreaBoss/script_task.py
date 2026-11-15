@@ -9,16 +9,15 @@ from datetime import datetime, time
 from module.atom.click import RuleClick
 from tasks.Component.GeneralBattle.general_battle import ExitMatcher, GeneralBattle
 from tasks.GameUi.game_ui import GameUi
-from tasks.GameUi.page import page_area_boss, page_shikigami_records, page_main
-from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
-from tasks.AreaBoss.assets import AreaBossAssets
+from tasks.GameUi.page import page_area_boss, page_main
 from tasks.AreaBoss.config_boss import AreaBossFloor
+from tasks.AreaBoss.quick_loadout import AreaBossQuickLoadout
 from module.logger import logger
 from module.exception import TaskEnd
 from module.atom.image import RuleImage
 
 
-class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AreaBossAssets):
+class ScriptTask(GeneralBattle, GameUi, AreaBossQuickLoadout):
 
     def _exit_matcher(self) -> ExitMatcher:
         return self.I_AB_CLOSE_RED
@@ -31,16 +30,8 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AreaBossAssets):
         self.check_can_run()
         # 直接手动关闭这个锁定阵容的设置
         self.config.area_boss.general_battle.lock_team_enable = False
+        self._area_boss_loadout_applied = False
         con = self.config.area_boss.boss
-
-        if self.config.area_boss.switch_soul.enable:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul(self.config.area_boss.switch_soul.switch_group_team)
-
-        if self.config.area_boss.switch_soul.enable_switch_by_name:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul_by_name(self.config.area_boss.switch_soul.group_name,
-                                         self.config.area_boss.switch_soul.team_name)
 
         self.goto_page(page_area_boss)
 
@@ -176,6 +167,11 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AreaBossAssets):
 
     def start_fight(self) -> bool:
         self.check_can_run()
+        if not self._area_boss_loadout_applied:
+            if not self.apply_dungeon_loadout(self.config.area_boss.general_battle.get_lineup, lambda: None, member=False):
+                self.set_next_run(task='AreaBoss', success=False, finish=False)
+                raise TaskEnd
+            self._area_boss_loadout_applied = True
         while 1:
             self.screenshot()
             if self.appear_then_click(self.I_FIRE, interval=1):

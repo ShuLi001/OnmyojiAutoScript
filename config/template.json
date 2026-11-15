@@ -115,9 +115,8 @@
     },
     "general_battle": {
       "lock_team_enable": false,
-      "preset_enable": false,
-      "preset_group": 1,
-      "preset_team": 1,
+      "enable_dungeon_loadout": false,
+      "dungeon_preset": "",
       "green_enable": false,
       "green_mark_type": "choose",
       "green_mark": "green_left1",
@@ -127,13 +126,6 @@
       "continuous_battle": false,
       "max_continuous": 0,
       "quick_exit": false
-    },
-    "switch_soul": {
-      "enable": false,
-      "switch_group_team": "-1,-1",
-      "enable_switch_by_name": false,
-      "group_name": "",
-      "team_name": ""
     }
   },
   "experience_youkai": {
@@ -226,9 +218,8 @@
     },
     "general_battle_config": {
       "lock_team_enable": false,
-      "preset_enable": false,
-      "preset_group": 1,
-      "preset_team": 1,
+      "enable_raid_loadout": false,
+      "raid_preset": "",
       "green_enable": false,
       "green_mark_type": "choose",
       "green_mark": "green_left1",
@@ -238,13 +229,6 @@
       "continuous_battle": false,
       "max_continuous": 0,
       "quick_exit": false
-    },
-    "switch_soul_config": {
-      "enable": false,
-      "switch_group_team": "-1,-1",
-      "enable_switch_by_name": false,
-      "group_name": "",
-      "team_name": ""
     }
   },
   "ryou_toppa": {
@@ -268,9 +252,8 @@
     },
     "general_battle_config": {
       "lock_team_enable": false,
-      "preset_enable": false,
-      "preset_group": 1,
-      "preset_team": 1,
+      "enable_raid_loadout": false,
+      "raid_preset": "",
       "green_enable": false,
       "green_mark_type": "choose",
       "green_mark": "green_left1",
@@ -280,13 +263,6 @@
       "continuous_battle": false,
       "max_continuous": 0,
       "quick_exit": false
-    },
-    "switch_soul_config": {
-      "enable": false,
-      "switch_group_team": "-1,-1",
-      "enable_switch_by_name": false,
-      "group_name": "",
-      "team_name": ""
     }
   },
   "kekkai_utilize": {
@@ -673,9 +649,8 @@
     },
     "general_battle_config": {
       "lock_team_enable": false,
-      "preset_enable": false,
-      "preset_group": 1,
-      "preset_team": 1,
+      "enable_dungeon_loadout": false,
+      "dungeon_preset": "",
       "green_enable": false,
       "green_mark_type": "choose",
       "green_mark": "green_left1",
@@ -684,14 +659,7 @@
       "battle_timeout": -1,
       "continuous_battle": false,
       "max_continuous": 0,
-      "quick_exit": false
-    },
-    "switch_soul": {
-      "enable": false,
-      "switch_group_team": "-1,-1",
-      "enable_switch_by_name": false,
-      "group_name": "",
-      "team_name": "",
+      "quick_exit": false,
       "auto_switch_soul": false,
       "ten_switch": "-1,-1",
       "eleven_switch": "-1,-1",
@@ -734,9 +702,8 @@
     },
     "general_battle_config": {
       "lock_team_enable": false,
-      "preset_enable": false,
-      "preset_group": 1,
-      "preset_team": 1,
+      "enable_dungeon_loadout": false,
+      "dungeon_preset": "",
       "green_enable": false,
       "green_mark_type": "choose",
       "green_mark": "green_left1",
@@ -746,13 +713,6 @@
       "continuous_battle": false,
       "max_continuous": 0,
       "quick_exit": false
-    },
-    "switch_soul_config": {
-      "enable": false,
-      "switch_group_team": "-1,-1",
-      "enable_switch_by_name": false,
-      "group_name": "",
-      "team_name": ""
     }
   },
   "fallen_sun": {
@@ -780,9 +740,8 @@
     },
     "general_battle_config": {
       "lock_team_enable": false,
-      "preset_enable": false,
-      "preset_group": 1,
-      "preset_team": 1,
+      "enable_dungeon_loadout": false,
+      "dungeon_preset": "",
       "green_enable": false,
       "green_mark_type": "choose",
       "green_mark": "green_left1",
@@ -792,13 +751,6 @@
       "continuous_battle": false,
       "max_continuous": 0,
       "quick_exit": false
-    },
-    "switch_soul": {
-      "enable": false,
-      "switch_group_team": "-1,-1",
-      "enable_switch_by_name": false,
-      "group_name": "",
-      "team_name": ""
     }
   },
   "eternity_sea": {
@@ -1267,9 +1219,8 @@
     },
     "general_battle_config": {
       "lock_team_enable": false,
-      "preset_enable": false,
-      "preset_group": 1,
-      "preset_team": 1,
+      "enable_dungeon_loadout": false,
+      "dungeon_preset": "",
       "green_enable": false,
       "green_mark_type": "choose",
       "green_mark": "green_left1",
@@ -1279,13 +1230,6 @@
       "continuous_battle": false,
       "max_continuous": 0,
       "quick_exit": false
-    },
-    "switch_soul_config": {
-      "enable": false,
-      "switch_group_team": "-1,-1",
-      "enable_switch_by_name": false,
-      "group_name": "",
-      "team_name": ""
     }
   },
   "goryou_realm": {
@@ -1306,9 +1250,8 @@
     },
     "general_battle_config": {
       "lock_team_enable": false,
-      "preset_enable": false,
-      "preset_group": 1,
-      "preset_team": 1,
+      "enable_dungeon_loadout": false,
+      "dungeon_preset": "",
       "green_enable": false,
       "green_mark_type": "choose",
       "green_mark": "green_left1",
@@ -1318,13 +1261,6 @@
       "continuous_battle": false,
       "max_continuous": 0,
       "quick_exit": false
-    },
-    "switch_soul_config": {
-      "enable": false,
-      "switch_group_team": "-1,-1",
-      "enable_switch_by_name": false,
-      "group_name": "",
-      "team_name": ""
     }
   },
   "hyakkiyakou": {
@@ -1748,8 +1684,7 @@
       "netherworld_time": "19:00:00"
     },
     "hunt_config": {
-      "kirin_group_team": "-1,-1",
-      "netherworld_group_team": "-1,-1"
+      "kirin_group_team": "-1,-1"
     },
     "kirin_battle_config": {
       "lock_team_enable": false,
@@ -1768,9 +1703,8 @@
     },
     "netherworld_battle_config": {
       "lock_team_enable": false,
-      "preset_enable": false,
-      "preset_group": 1,
-      "preset_team": 1,
+      "enable_dungeon_loadout": false,
+      "dungeon_preset": "",
       "green_enable": false,
       "green_mark_type": "choose",
       "green_mark": "green_left1",
@@ -1878,8 +1812,7 @@
       "strategy_boss": "FALSE",
       "strategy_general": "30",
       "strategy_elite": "4380000",
-      "enable_switch_soul_in_as": false,
-      "enable_switch_preset_in_as": false,
+      "enable_switch_loadout_in_as": false,
       "preset_boss": "6,1",
       "preset_general": "6,2",
       "preset_elite": "6,3",
@@ -1928,9 +1861,6 @@
     },
     "general_battle": {
       "lock_team_enable": false,
-      "preset_enable": false,
-      "preset_group": 1,
-      "preset_team": 1,
       "green_enable": false,
       "green_mark_type": "choose",
       "green_mark": "green_left1",
@@ -1939,14 +1869,9 @@
       "battle_timeout": -1,
       "continuous_battle": false,
       "max_continuous": 0,
-      "quick_exit": false
-    },
-    "switch_soul_config": {
-      "enable": false,
-      "switch_group_team": "-1,-1",
-      "enable_switch_by_name": false,
-      "group_name": "",
-      "team_name": ""
+      "quick_exit": false,
+      "enable_switch_loadout_in_dr": false,
+      "demon_retreat_preset": ""
     }
   },
   "guild_activity_monitor": {

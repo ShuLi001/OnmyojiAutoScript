@@ -205,5 +205,23 @@
     "method": "Template matching",
     "threshold": 0.8,
     "description": "挑战数进度条"
+  },
+  {
+    "itemName": "ab_loadout_entry",
+    "imageName": "res_ab_loadout_entry.png",
+    "roiFront": "1190,358,36,36",
+    "roiBack": "1180,255,56,149",
+    "method": "Template matching",
+    "threshold": 0.9,
+    "description": "地域鬼王详情右侧队伍预设图标中心"
+  },
+  {
+    "itemName": "ab_loadout_already_equipped",
+    "imageName": "res_ab_loadout_already_equipped.png",
+    "roiFront": "454,226,372,28",
+    "roiBack": "432,218,420,44",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "全队正在使用预设御魂和阴阳术提示"
   }
 ]

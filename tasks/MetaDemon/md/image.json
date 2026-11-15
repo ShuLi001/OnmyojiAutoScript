@@ -69,7 +69,7 @@
     "roiBack": "0,0,1280,720",
     "method": "Template matching",
     "threshold": 0.85,
-    "description": "超鬼王快捷阵容出战锚点"
+    "description": "超鬼王目标阵容可出战时的按钮"
   },
   {
     "itemName": "md_loadout_incomplete",
@@ -78,7 +78,16 @@
     "roiBack": "0,0,1280,720",
     "method": "Template matching",
     "threshold": 0.85,
-    "description": "预设人数不足时的面板锚点"
+    "description": "目标阵容人数不足时的提示"
+  },
+  {
+    "itemName": "md_loadout_panel_border",
+    "imageName": "md_loadout_panel_border.png",
+    "roiFront": "995,587,55,26",
+    "roiBack": "987,579,71,42",
+    "method": "Template matching",
+    "threshold": 0.9,
+    "description": "超鬼王快捷阵容面板右下边框"
   },
   {
     "itemName": "md_loadout_confirm",

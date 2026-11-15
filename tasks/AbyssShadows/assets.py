@@ -47,6 +47,10 @@ class AbyssShadowsAssets:
 	C_QUIT_AREA = RuleClick(roi_front=(20,36,30,14), roi_back=(20,36,30,14), name="quit_area")
 	# 红标主怪点击区域 
 	C_MARK_MAIN = RuleClick(roi_front=(380,15,45,30), roi_back=(380,15,45,30), name="mark_main")
+	# 点击挑战详情底部的队伍预设
+	C_ABYSS_LOADOUT_OPEN = RuleClick(roi_front=(894,627,53,42), roi_back=(894,627,53,42), name="abyss_loadout_open")
+	# 点击队伍预设面板下方的空白背景
+	C_ABYSS_LOADOUT_DISMISS = RuleClick(roi_front=(779,615,60,35), roi_back=(779,615,60,35), name="abyss_loadout_dismiss")
 
 
 	# Image Rule Assets
@@ -118,6 +122,10 @@ class AbyssShadowsAssets:
 	I_CHECK_ABYSS = RuleImage(roi_front=(1082,14,52,50), roi_back=(992,0,247,80), threshold=0.8, method="Template matching", file="./tasks/AbyssShadows/res/res_check_abyss.png")
 	# 极难度 
 	I_DIFFICULTY_EXTREME = RuleImage(roi_front=(644,593,40,39), roi_back=(620,383,89,263), threshold=0.8, method="Template matching", file="./tasks/AbyssShadows/res/res_difficulty_extreme.png")
+	# 狭间挑战详情的队伍预设图标
+	I_ABYSS_LOADOUT_ENTRY = RuleImage(roi_front=(894,630,50,39), roi_back=(890,626,58,47), threshold=0.85, method="Template matching", file="./tasks/AbyssShadows/res/res_abyss_loadout_entry.png")
+	# 狭间暗域队伍预设面板右下边框
+	I_ABYSS_LOADOUT_PANEL_BORDER = RuleImage(roi_front=(1047,571,55,26), roi_back=(1039,563,71,42), threshold=0.9, method="Template matching", file="./tasks/AbyssShadows/res/res_abyss_loadout_panel_border.png")
 
 
 	# List Rule Assets

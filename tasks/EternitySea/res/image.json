@@ -29,8 +29,8 @@
   {
     "itemName": "eternitysea_unlock",
     "imageName": "res_eternitysea_unlock.png",
-    "roiFront": "705,659,20,26",
-    "roiBack": "645,630,195,90",
+    "roiFront": "699,652,32,35",
+    "roiBack": "689,643,52,52",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "开锁"
@@ -38,10 +38,10 @@
   {
     "itemName": "neweternitysea_lock",
     "imageName": "res_neweternitysea_lock.png",
-    "roiFront": "702,658,24,28",
-    "roiBack": "655,636,182,84",
+    "roiFront": "699,652,32,35",
+    "roiBack": "689,643,52,52",
     "method": "Template matching",
-    "threshold": 0.6,
+    "threshold": 0.8,
     "description": "关锁"
   }
 ]

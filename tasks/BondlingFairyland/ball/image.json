@@ -1,5 +1,14 @@
 [
   {
+    "itemName": "ball_loadout_border",
+    "imageName": "ball_loadout_border.png",
+    "roiFront": "928,507,42,20",
+    "roiBack": "920,499,58,36",
+    "method": "Template matching",
+    "threshold": 0.9,
+    "description": "探查和结契预设面板的右下边框"
+  },
+  {
     "itemName": "ball_fire",
     "imageName": "ball_ball_fire.png",
     "roiFront": "1140,575,100,100",

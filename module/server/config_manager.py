@@ -13,6 +13,10 @@ from module.config.config_model import ConfigModel
 from module.config.realm_status import update_realm_timer_profile
 from module.config.utils import convert_to_underscore, read_file, write_file
 from module.logger import logger
+from tasks.Component.QuickLoadout.dungeon_config import DungeonLoadoutTaskConfig
+from tasks.DemonRetreat.config import DemonRetreat
+from tasks.Hunt.config import Hunt
+from tasks.RealmRaid.loadout_config import RaidLoadoutTaskConfig
 
 
 CONFIG_NAME_RESERVED_CHARS = set('/\\:*?"<>|')
@@ -155,6 +159,8 @@ class ConfigManager:
     def _collect_unknown_field_errors(data: Any, model_type: type[BaseModel], prefix: str = '') -> list[dict[str, str]]:
         if not isinstance(data, dict):
             return []
+        if issubclass(model_type, (DemonRetreat, Hunt, RaidLoadoutTaskConfig, DungeonLoadoutTaskConfig)):
+            data = model_type.migrate_loadout_config(data)
 
         errors = []
         fields = model_type.model_fields
