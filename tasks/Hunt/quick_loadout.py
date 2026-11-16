@@ -2,6 +2,7 @@ from copy import copy
 
 from module.atom.click import RuleClick
 from tasks.Component.QuickLoadout.dungeon import DungeonQuickLoadout
+from tasks.GameUi.assets import GameUiAssets
 from tasks.Hunt.assets import HuntAssets
 
 
@@ -27,3 +28,28 @@ class NetherworldQuickLoadout(DungeonQuickLoadout, HuntAssets):
             return False
         self.click(self.LOADOUT_ENTRY)
         return True
+
+
+class KirinQuickLoadout(DungeonQuickLoadout):
+    LOADOUT_TASK_NAME = '麒麟'
+    LOADOUT_CONTROL_PREFIX = 'kirin_loadout'
+    LOADOUT_OPEN = RuleClick((940, 633, 48, 42), (940, 633, 48, 42), 'kirin_loadout_open')
+    LOADOUT_DISMISS = RuleClick((532, 563, 37, 33), (532, 563, 37, 33), 'kirin_loadout_dismiss')
+
+    LOADOUT_FIGHT = copy(DungeonQuickLoadout.LOADOUT_FIGHT)
+    LOADOUT_FIGHT.roi_front = [843, 558, 118, 43]
+    LOADOUT_FIGHT.roi_back = (824, 540, 159, 80)
+    LOADOUT_INCOMPLETE = copy(DungeonQuickLoadout.LOADOUT_INCOMPLETE)
+    LOADOUT_INCOMPLETE.roi_front = [748, 575, 318, 20]
+    LOADOUT_INCOMPLETE.roi_back = (730, 558, 354, 54)
+    LOADOUT_INCOMPLETE.threshold = 0.78
+
+    def __init__(self, task):
+        self.device = task.device
+        self.screenshot = task.screenshot
+        self.appear = task.appear
+        self.click = task.click
+        self.swipe = task.swipe
+
+    def _activity_loadout_entry_visible(self) -> bool:
+        return self.appear(GameUiAssets.I_CHECK_HUNT_KIRIN) and self.appear(HuntAssets.I_KIRIN_LOADOUT_ENTRY)

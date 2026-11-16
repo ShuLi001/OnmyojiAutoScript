@@ -87,6 +87,7 @@
   "enable_sougenbi_loadout_help": "每轮任务在业原火副本页应用一次队伍预设与御魂。",
   "enable_goryou_loadout_help": "进入选中的御灵后，每轮任务在首次挑战前应用一次队伍预设与御魂。",
   "enable_netherworld_loadout_help": "首次挑战前，通过阴界之门左下角的「队伍预设」应用一次阵容与御魂。",
+  "enable_kirin_loadout_help": "首次挑战前，通过麒麟页面底部的「队伍预设」应用一次阵容与御魂。",
   "battle_bondling_loadout_help": "探查和结契各自在开战前从页面底部应用预设与御魂；在两种玩法之间切换时重新应用。组队队员沿用式神录装配御魂。",
   "enable_area_boss_loadout_help": "每轮任务首次挑战前，通过地域鬼王详情右侧的「队伍预设」应用阵容与御魂。",
   "dungeon_preset_help": "填写组号,队伍号（如 1,2）或分组名,队伍名（如 副本,金币，使用 OCR 识别）。留空或填 -1,-1 沿用当前阵容。",

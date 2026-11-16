@@ -1683,14 +1683,10 @@
       "kirin_time": "19:00:00",
       "netherworld_time": "19:00:00"
     },
-    "hunt_config": {
-      "kirin_group_team": "-1,-1"
-    },
     "kirin_battle_config": {
       "lock_team_enable": false,
-      "preset_enable": false,
-      "preset_group": 1,
-      "preset_team": 1,
+      "enable_dungeon_loadout": false,
+      "dungeon_preset": "",
       "green_enable": false,
       "green_mark_type": "choose",
       "green_mark": "green_left1",

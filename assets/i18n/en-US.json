@@ -23,6 +23,7 @@
   "enable_sougenbi_loadout_help": "Apply the team preset and souls once per run on the Sougenbi dungeon page.",
   "enable_goryou_loadout_help": "Apply the team preset and souls once per run on the selected Goryou boss page before the first challenge.",
   "enable_netherworld_loadout_help": "Apply the team preset and souls from Team Preset at the lower left of the Netherworld page before the first challenge.",
+  "enable_kirin_loadout_help": "Apply the team preset and souls from Team Preset at the bottom of the Kirin page before the first challenge.",
   "battle_bondling_loadout_help": "Apply the team preset and souls on the Search or Capture page before battle. Reapply when switching between them. Party members equip souls from the Shikigami Records.",
   "enable_area_boss_loadout_help": "Apply the team preset and souls from Team Preset on the right of the first Area Boss detail page you challenge each run.",
   "dungeon_preset_help": "Enter group number,team number (e.g. 1,2) or group name,team name (read with OCR). Leave blank or enter -1,-1 to keep the current team.",

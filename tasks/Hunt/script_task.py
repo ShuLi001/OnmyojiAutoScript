@@ -9,11 +9,11 @@ from module.exception import TaskEnd
 from module.logger import logger
 
 from tasks.GameUi.game_ui import GameUi
-from tasks.GameUi.page import page_main, page_hunt, page_hunt_kirin, page_shikigami_records
+from tasks.GameUi.page import page_main, page_hunt, page_hunt_kirin
 from tasks.Component.GeneralBattle.general_battle import GeneralBattle
 from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
 from tasks.Component.GeneralInvite.general_invite import GeneralInvite
-from tasks.Hunt.quick_loadout import NetherworldQuickLoadout
+from tasks.Hunt.quick_loadout import KirinQuickLoadout, NetherworldQuickLoadout
 
 
 class ScriptTask(GameUi, GeneralBattle, GeneralInvite, NetherworldQuickLoadout):
@@ -26,10 +26,6 @@ class ScriptTask(GameUi, GeneralBattle, GeneralInvite, NetherworldQuickLoadout):
             # 设置下次运行时间 为今天的晚上七点钟
             raise TaskEnd('Hunt')
         if self.kirin_day:
-            kirin_team = self.config.hunt.hunt_config.kirin_group_team
-            if kirin_team != '-1,-1':
-                self.goto_page(page_shikigami_records)
-                self.run_switch_soul(kirin_team)
             self.goto_page(page_hunt_kirin)
             self.kirin()
         else:
@@ -94,22 +90,30 @@ class ScriptTask(GameUi, GeneralBattle, GeneralInvite, NetherworldQuickLoadout):
 
     def kirin(self):
         logger.hr('kirin', 2)
+        battle = self.config.hunt.kirin_battle_config
+        preset_applied = False
         while 1:
             self.screenshot()
             if self.appear(self.I_PREPARE_HIGHLIGHT):
                 break
             if self.appear_then_click(self.I_UI_CONFIRM, interval=0.9):
                 continue
-            if self.appear_then_click(self.I_KIRIN_CHALLAGE, interval=1.5):
-                continue
             if self.appear(self.I_KIRIN_END):
                 # 今日已挑战
                 logger.warning('Today have already challenged the Kirin')
                 self.ui_click_until_disappear(self.I_UI_BACK_YELLOW)
                 return
+            if not preset_applied and self.appear(self.I_KIRIN_CHALLAGE):
+                if not KirinQuickLoadout(self).apply_dungeon_loadout(battle.get_lineup, lambda: None, member=False):
+                    self.set_next_run(task='Hunt', success=False)
+                    raise TaskEnd('Hunt')
+                preset_applied = True
+                continue
+            if self.appear_then_click(self.I_KIRIN_CHALLAGE, interval=1.5):
+                continue
         logger.info('Start battle')
         self.run_general_battle(
-            self.config.hunt.kirin_battle_config,
+            battle,
             battle_key="hunt_kirin",
             exit_matcher=page_hunt_kirin,
         )
