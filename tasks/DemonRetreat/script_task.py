@@ -2,12 +2,13 @@
 # @author runhey
 # github https://github.com/runhey
 from time import sleep
-from datetime import timedelta, datetime, time
+from datetime import datetime, time
 from cached_property import cached_property
 
 from module.exception import TaskEnd
 from module.logger import logger
 from module.base.timer import Timer
+from module.config.weekly_schedule import next_weekly_run
 
 from tasks.GameUi.game_ui import GameUi
 from tasks.GameUi.page import page_main, page_hunt, page_shikigami_records, page_guild
@@ -220,19 +221,14 @@ class ScriptTask(GameUi, GeneralBattle, SwitchSoul, DemonRetreatAssets, AbyssSha
 
     def get_next_dt(self, now: datetime, success: bool = False) -> datetime:
         """获取下一次退治运行时间"""
-        rt = self.config.model.demon_retreat.demon_retreat_time.custom_run_time
-        scheduler = self.config.model.demon_retreat.scheduler
-        if now.weekday() != 5:
-            return datetime.combine(now + timedelta(days=(5 - now.weekday() + 7) % 7), rt)
-        target_dt = datetime.combine(now.date(), rt)
-        # 在1小时之内则间隔failure_interval后重试
-        if target_dt <= now < target_dt + timedelta(hours=1) and not success:
-            return now + scheduler.failure_interval
-        return target_dt + timedelta(days=7)
+        cfg = self.config.model.demon_retreat
+        return next_weekly_run(
+            cfg.weekly_run_times, now, retry_delay=cfg.scheduler.failure_interval, skip_today=success,
+        )
 
     def check_date(self, now: datetime) -> bool:
         """检查当前日期是否可以运行退治"""
-        return now.weekday() == 5
+        return any(day == now.weekday() for day, _ in self.config.model.demon_retreat.weekly_run_times)
 
 
 if __name__ == '__main__':

@@ -9,6 +9,7 @@ from module.atom.click import RuleClick
 from pydantic import BaseModel, Field
 
 from module.base.timer import Timer
+from module.config.weekly_schedule import WeeklyRunTimes
 from tasks.AbyssShadows.assets import AbyssShadowsAssets
 from tasks.Component.config_base import ConfigBase, Time, DateTime, dynamic_hide
 from tasks.Component.config_scheduler import Scheduler
@@ -355,3 +356,8 @@ class AbyssShadows(ConfigBase):
     saved_params: SavedParams = Field(default_factory=SavedParams)
 
     hide_fields = dynamic_hide('saved_params')
+
+    @property
+    def weekly_run_times(self) -> WeeklyRunTimes:
+        times = self.abyss_shadows_time
+        return ((4, times.abyss_shadows_4), (5, times.abyss_shadows_5), (6, times.abyss_shadows_6))

@@ -5,6 +5,7 @@ from enum import Enum
 
 from pydantic import Field, BaseModel, SerializationInfo, field_serializer
 
+from module.config.weekly_schedule import WeeklyRunTimes
 from tasks.Component.config_scheduler import Scheduler
 from tasks.Component.config_base import ConfigBase, Time, dynamic_hide
 
@@ -36,3 +37,7 @@ class GuildBanquet(ConfigBase):
     scheduler: Scheduler = Field(default_factory=Scheduler)
     guild_banquet_config: GuildBanquetConfig = Field(default_factory=GuildBanquetConfig)
 
+    @property
+    def weekly_run_times(self) -> WeeklyRunTimes:
+        times = self.guild_banquet_config
+        return ((times.day_1.to_index(), times.run_time_1), (times.day_2.to_index(), times.run_time_2))

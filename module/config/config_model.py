@@ -13,6 +13,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError, Field
 
 from module.config.utils import *
+from module.config.weekly_schedule import resolve_weekly_run
 from module.logger import logger
 
 # 导入配置的Python文件
@@ -433,6 +434,12 @@ class ConfigModel(ConfigBase):
 
         # 设置参数
         try:
+            if group == 'scheduler' and argument == 'next_run' and isinstance(value, datetime):
+                run_times = getattr(task_object, 'weekly_run_times', ())
+                if run_times:
+                    now = datetime.now()
+                    # 首页立即运行传入过去的时间，按服务端当天的开放日处理。
+                    value = resolve_weekly_run(run_times, max(value, now.replace(microsecond=0)), now)
             setattr(group_object, argument, value)
             logger.info(f'Set arg {self.config_name}.{task}.{group}.{argument}.{value}')
             self.save()  # 我是没有想到什么方法可以使得属性改变自动保存的

@@ -7,11 +7,11 @@ from time import sleep
 
 from datetime import datetime
 
-from future.backports.datetime import timedelta
 from module.exception import TaskEnd, RequestHumanTakeover
 from module.base.timer import Timer
 from module.logger import logger
 from module.config.config import Config
+from module.config.weekly_schedule import next_weekly_run
 from module.device.device import Device
 from tasks.AbyssShadows.assets import AbyssShadowsAssets
 from tasks.AbyssShadows.config import AbyssShadows, EnemyType, AreaType, Code, AbyssShadowsDifficulty, \
@@ -806,40 +806,16 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, AbyssShadowsAssets):
         logger.info(f"Swipe {p1} to {(p1[0] + dx, p1[1] + dy)}")
 
     def get_next_dt(self, now: datetime, success: bool = False) -> datetime:
-        """
-        获取下一次运行的时间
-        :return:
-        """
-        as_time = self.config.model.abyss_shadows.abyss_shadows_time
-        target_time = getattr(as_time, f'abyss_shadows_{now.weekday()}', None)
-        if target_time is None:  # 不在周五/六/日
-            fri_date = now + timedelta(days=(4 - now.weekday()))
-            return datetime.combine(fri_date, as_time.abyss_shadows_4)
-        target_dt = datetime.combine(now.date(), target_time)
-        if now >= (target_dt + timedelta(hours=1)) or success:  # 在预计的1小时之后或运行成功了
-            tomorrow_dt = now.date() + timedelta(days=1)
-            match now.weekday():
-                case 4:
-                    return datetime.combine(tomorrow_dt, as_time.abyss_shadows_5)
-                case 5:
-                    return datetime.combine(tomorrow_dt, as_time.abyss_shadows_6)
-                case 6:
-                    next_fri_dt = now.date() + timedelta(days=5)
-                    return datetime.combine(next_fri_dt, as_time.abyss_shadows_4)
-        if now < target_dt:  # 还没到点
-            return target_dt
-        # 到点了且在1小时之内, 则设置失败的间隔时间之后运行
-        return now + self.config.model.abyss_shadows.scheduler.failure_interval
+        cfg = self.config.model.abyss_shadows
+        return next_weekly_run(
+            cfg.weekly_run_times, now, retry_delay=cfg.scheduler.failure_interval, skip_today=success,
+        )
 
     def check_date(self, now: datetime) -> bool:
         """
         检查当前时间是否可以运行狭间
         """
-        as_time = self.config.model.abyss_shadows.abyss_shadows_time
-        target_time = getattr(as_time, f'abyss_shadows_{now.weekday()}', None)
-        if target_time is None:  # 不在周五/六/日
-            return False
-        return True
+        return any(day == now.weekday() for day, _ in self.config.model.abyss_shadows.weekly_run_times)
 
 
 if __name__ == "__main__":

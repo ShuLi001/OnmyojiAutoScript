@@ -4,6 +4,7 @@
 from datetime import timedelta
 from pydantic import BaseModel, Field
 
+from module.config.weekly_schedule import WeeklyRunTimes
 from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
 from tasks.Component.SwitchSoul.switch_soul_config import SwitchSoulConfig
 from tasks.Component.config_scheduler import Scheduler
@@ -20,3 +21,7 @@ class DemonRetreat(ConfigBase):
     demon_retreat_time: DemonRetreatTime = Field(default_factory=DemonRetreatTime)
     general_battle: GeneralBattleConfig = Field(default_factory=GeneralBattleConfig)
     switch_soul_config: SwitchSoulConfig = Field(default_factory=SwitchSoulConfig)
+
+    @property
+    def weekly_run_times(self) -> WeeklyRunTimes:
+        return ((5, self.demon_retreat_time.custom_run_time),)
