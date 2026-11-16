@@ -10,6 +10,7 @@ from typing import Any, get_args, get_origin
 from pydantic import BaseModel, ValidationError
 
 from module.config.config_model import ConfigModel
+from module.config.realm_status import update_realm_timer_profile
 from module.config.utils import convert_to_underscore, read_file, write_file
 from module.logger import logger
 
@@ -569,6 +570,7 @@ class ConfigManager:
             return False
         try:
             old_path.rename(new_path)
+            update_realm_timer_profile(old_name, new_name)
             logger.info(f'rename {old_path} to {new_path}')
             return True
         except Exception as e:
@@ -589,6 +591,7 @@ class ConfigManager:
             return False
         try:
             file_path.unlink()
+            update_realm_timer_profile(file)
             logger.info(f'delete {file_path}')
             return True
         except Exception as e:

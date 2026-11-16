@@ -2,6 +2,7 @@
 log
 config/backup/*
 config/asset_snapshot/
+config/realm_status.sqlite3*
 config/*.ini
 !config/template.ini
 config/*.yaml

@@ -180,21 +180,24 @@ class Duration(Single):
         return result
 
     @staticmethod
-    def parse_time(string):
+    def parse_time(string, *, strict=False):
         """
         Args:
             string (str): `01:30:00`
 
         Returns:
-            datetime.timedelta:
+            datetime.timedelta, or None for an invalid strict reading.
         """
-        result = re.search(r'(\d{1,2}):?(\d{2}):?(\d{2})', string)
+        pattern = r'(\d{1,2}):?(\d{2}):?(\d{2})'
+        result = re.fullmatch(pattern, string) if strict else re.search(pattern, string)
         if result:
             result = [int(s) for s in result.groups()]
-            return timedelta(hours=result[0], minutes=result[1], seconds=result[2])
-        else:
-            logger.warning(f'Invalid duration: {string}')
-            return timedelta(hours=0, minutes=0, seconds=0)
+            if not strict or (result[1] < 60 and result[2] < 60):
+                return timedelta(hours=result[0], minutes=result[1], seconds=result[2])
+        if strict:
+            return None
+        logger.warning(f'Invalid duration: {string}')
+        return timedelta(0)
 
     def ocr_duration(self, image) -> timedelta:
         """
@@ -205,8 +208,7 @@ class Duration(Single):
         result = self.ocr_single(image)
 
         if result == "":
-            return timedelta(hours=0, minutes=0, seconds=0)
-
+            return timedelta(0)
         return self.parse_time(result)
 
 class Quantity(BaseCor):

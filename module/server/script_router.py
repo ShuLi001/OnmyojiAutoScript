@@ -13,6 +13,7 @@ from starlette.concurrency import run_in_threadpool
 from fastapi.responses import Response, StreamingResponse
 from fastapi import WebSocket, WebSocketDisconnect
 from datetime import datetime
+from module.config.realm_status import read_realm_timers
 from module.config.utils import convert_to_underscore
 
 from module.logger import logger
@@ -205,7 +206,7 @@ async def config_rename(old_name: str = '', new_name: str = ''):
         return False
     if old_name in mm.script_process:
         if mm.script_process[old_name].state != ScriptState.INACTIVE:
-            mm.script_process[old_name].stop()
+            await mm.script_process[old_name].stop()
         del mm.script_process[old_name]
     if not mm.rename(old_name, new_name):
         raise HTTPException(status_code=400, detail='Rename failed')
@@ -223,7 +224,7 @@ async def config_delete(name: str = ''):
         raise HTTPException(status_code=400, detail='Delete failed')
     if name in mm.script_process:
         if mm.script_process[name].state != ScriptState.INACTIVE:
-            mm.script_process[name].stop()
+            await mm.script_process[name].stop()
         del mm.script_process[name]
     if not mm.delete(name):
         raise HTTPException(status_code=400, detail='Delete failed')
@@ -266,6 +267,14 @@ async def script_stop(script_name: str):
         return
     await mm.script_process[script_name].stop()
     return
+
+
+@script_app.get('/{script_name}/realm_status')
+def script_realm_status(script_name: str, response: Response):
+    if script_name not in mm.all_script_files():
+        raise HTTPException(status_code=404, detail='配置不存在')
+    response.headers['Cache-Control'] = 'no-store'
+    return read_realm_timers(mm.config_cache(script_name))
 
 
 @script_app.get('/{script_name}/asset_snapshot')
