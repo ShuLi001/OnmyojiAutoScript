@@ -1,6 +1,8 @@
 # This Python file uses the following encoding: utf-8
 # @author runhey
 # github https://github.com/runhey
+import numpy as np
+
 from module.base.timer import Timer
 from module.exception import RequestHumanTakeover, GameTooManyClickError, GameStuckError
 from module.logger import logger
@@ -10,6 +12,26 @@ from tasks.Restart.assets import RestartAssets
 from tasks.base_task import BaseTask
 
 DESKTOP_MPAY_CLOSE_LIMIT = 5
+
+
+def _has_login_animation_bars(image: np.ndarray) -> bool:
+    """识别安卓开场动画的横向黑边，排除启动时的全黑画面。"""
+    height, width = image.shape[:2]
+    if width <= height:
+        return False
+
+    # 避开右上角的跳过按钮；稀疏采样即可判断黑边。
+    columns = slice(int(width * 0.15), int(width * 0.78), 4)
+
+    def dark_fraction(start: float, end: float) -> float:
+        band = image[int(height * start):int(height * end):4, columns]
+        return float((band.max(axis=2) <= 18).mean())
+
+    return (
+        dark_fraction(0.035, 0.085) >= 0.95
+        and dark_fraction(0.91, 0.965) >= 0.95
+        and dark_fraction(0.23, 0.78) < 0.85
+    )
 
 
 class LoginService(
@@ -37,6 +59,8 @@ class LoginService(
         orientation_timer = Timer(10)
         skip_login_animation = True
         skip_click_mx_cnt = 5
+        desktop = self.device.is_desktop
+        animation_frames = 0
         login_success = False
         popup_count = 0
 
@@ -59,7 +83,9 @@ class LoginService(
                 self.device.get_orientation()
                 orientation_timer.reset()
 
-            self.screenshot()
+            image = self.screenshot()
+            if not desktop and skip_login_animation and skip_click_mx_cnt > 0:
+                animation_frames = animation_frames + 1 if _has_login_animation_bars(image) else 0
             if handle_desktop_login_popup():
                 continue
             if self.appear_then_click(
@@ -170,13 +196,14 @@ class LoginService(
                 logger.info('Cancel switch from early server to normal server')
                 continue
 
-            # 进入登录页面后或点击超过一定次数不再处理登录动画逻辑
-            if self.appear(self.I_LOGIN_8, interval=0.6) or skip_click_mx_cnt <= 0:
+            # 桌面端维持原行为；安卓端点满后仍可直接识别「跳过」。
+            if self.appear(self.I_LOGIN_8, interval=0.6) or (desktop and skip_click_mx_cnt <= 0):
                 skip_login_animation = False
             if skip_login_animation:
-                if self.ocr_appear_click(self.O_LOGIN_ANIMATION_SKIP, interval=2.5):  # 点击跳过登录动画
+                if self.ocr_appear_click(self.O_LOGIN_ANIMATION_SKIP, interval=2.5):
                     continue
-                if self.click(self.C_LOGIN_ANIMATION_CENTER, interval=5):  # 点击屏幕中央触发跳过显示
+                if (skip_click_mx_cnt > 0 and (desktop or animation_frames >= 2)
+                        and self.click(self.C_LOGIN_ANIMATION_CENTER, interval=5)):
                     skip_click_mx_cnt -= 1
 
             if self.ocr_appear_click(self.O_LOGIN_ENTER_GAME, interval=3):
