@@ -1,5 +1,14 @@
 [
   {
+    "itemName": "md_boss_star_purple",
+    "imageName": "md_boss_star_purple.png",
+    "roiFront": "65,205,11,12",
+    "roiBack": "52,203,70,16",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "description": "自己发现头像底部的紫色亮星标，用于逐格匹配"
+  },
+  {
     "itemName": "md_ticket_queue_title",
     "imageName": "md_ticket_queue_title.png",
     "roiFront": "438,148,359,47",

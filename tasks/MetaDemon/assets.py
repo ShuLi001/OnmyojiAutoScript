@@ -32,6 +32,8 @@ class MetaDemonAssets:
 
 
 	# Image Rule Assets
+	# 自己发现头像底部的紫色亮星标，用于逐格匹配
+	I_MD_BOSS_STAR_PURPLE = RuleImage(roi_front=(65,205,11,12), roi_back=(52,203,70,16), threshold=0.8, method="Template matching", file="./tasks/MetaDemon/md/md_boss_star_purple.png")
 	# 召唤队列标题
 	I_MD_TICKET_QUEUE_TITLE = RuleImage(roi_front=(438,148,359,47), roi_back=(430,140,375,63), threshold=0.85, method="Template matching", file="./tasks/MetaDemon/md/md_ticket_queue_title.png")
 	# 召唤队列底部前往按钮

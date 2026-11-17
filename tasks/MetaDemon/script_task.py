@@ -7,6 +7,7 @@ import random
 import re
 from datetime import datetime, timedelta
 
+import cv2
 import numpy as np
 
 from module.atom.image import RuleImage
@@ -256,17 +257,36 @@ class ScriptTask(TicketFarmMixin, GeneralBattle, MetaDemonQuickLoadout, GameUi):
             self.finish_task()
         return True
 
+    @staticmethod
+    def _purple_star_mask(image: np.ndarray) -> np.ndarray:
+        red, green, blue = image.astype(np.int16).transpose(2, 0, 1)
+        return ((red >= 125) & (blue >= 145) & (red - green >= 60) & (blue - green >= 90)).astype(np.uint8)
+
     def _read_current_boss_type(self) -> BossType | None:
         """读取左侧「自己发现」头像下方连续亮起的星标。"""
-        strip = self.device.image[205:217, 54:120]
-        if strip.shape != (12, 66, 3):
+        image = self.device.image
+        area = image[203:219, 52:122]
+        if area.shape != (16, 70, 3):
             return None
+        strip = area[2:14, 2:68]
         red, green, blue = strip.reshape(12, 6, 11, 3).astype(np.int16).transpose(3, 0, 1, 2)
         orange = ((red >= 175) & (red - green >= 35) & (green - blue >= 25)).sum(axis=(0, 2))
         neutral = np.maximum.reduce([red, green, blue]) - np.minimum.reduce([red, green, blue]) <= 23
         gray = (neutral & (red >= 82) & (red <= 190)).sum(axis=(0, 2))
         lit = (orange >= 45) & (gray < 35)
-        unlit = (gray >= 45) & (orange < 30)
+        purple_area = self._purple_star_mask(area)
+        purple = purple_area[2:14, 2:68].reshape(12, 6, 11).sum(axis=(0, 2))
+        candidates = np.flatnonzero((purple >= 45) & (gray < 35))
+        if candidates.size:
+            rule = self.I_MD_BOSS_STAR_PURPLE
+            template = self._purple_star_mask(rule.image)
+            for index in candidates:
+                # 在当前槽位附近允许 2 像素偏移；色罩排除头像底色。
+                x = index * 11
+                score = cv2.matchTemplate(purple_area[:, x:x + 15], template, cv2.TM_CCOEFF_NORMED).max()
+                if score > rule.threshold:
+                    lit[index] = True
+        unlit = (gray >= 45) & (orange < 30) & (purple < 30)
         count = int(lit.sum())
         if count and lit[:count].all() and unlit[count:].all():
             return BossType(count)
