@@ -100,12 +100,18 @@ class LogStatsParser:
             self._consume_regular_line(line)
             index += 1
 
-    def snapshot(self, script_name: str = "", tail_lines: list[str] | None = None) -> dict[str, Any]:
+    def snapshot(
+        self, script_name: str = "", tail_lines: list[str] | None = None, *, include_running: bool = False
+    ) -> dict[str, Any]:
         parser = copy.deepcopy(self)
         if tail_lines:
             parser.consume_lines(tail_lines)
         if not parser._saw_scheduler_marker:
             parser._close_active_battle()
+            parser._close_active_task()
+        elif include_running:
+            # Project the running batch onto this copy without settling the cached
+            # task or counting an unfinished battle as a completed result.
             parser._close_active_task()
 
         tasks = parser._build_tasks_payload()
@@ -628,7 +634,9 @@ class LogStatsService:
             cache.parser.consume_lines(confirmed_lines)
 
         cache.signature = signature
-        cache.snapshot = cache.parser.snapshot(script_name=script_name, tail_lines=cache.tail_lines)
+        cache.snapshot = cache.parser.snapshot(
+            script_name=script_name, tail_lines=cache.tail_lines, include_running=True
+        )
         self._today_cache[script_name] = cache
         return cache
 
