@@ -1,5 +1,14 @@
 [
   {
+    "itemName": "dr_loadout_panel_border",
+    "imageName": "DemonRetreat_dr_loadout_panel_border.png",
+    "roiFront": "985,543,55,26",
+    "roiBack": "977,535,71,42",
+    "method": "Template matching",
+    "threshold": 0.9,
+    "description": "首领退治队伍预设面板右下边框"
+  },
+  {
     "itemName": "shrine",
     "imageName": "DemonRetreat_shrine.png",
     "roiFront": "870,624,65,61",
@@ -21,7 +30,7 @@
     "itemName": "hunt_check",
     "imageName": "DemonRetreat_hunt_check.png",
     "roiFront": "570,12,143,46",
-    "roiBack": "570,12,143,46",
+    "roiBack": "562,4,159,62",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "检查是否成功进入首领退治"

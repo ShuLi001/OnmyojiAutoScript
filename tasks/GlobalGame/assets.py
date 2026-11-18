@@ -18,13 +18,13 @@ class GlobalGameAssets:
 	I_G_REJECT = RuleImage(roi_front=(846,563,60,63), roi_back=(820,545,110,100), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_reject.png")
 	C_G_REJECT = RuleClick(roi_front=(837,561,300,70), roi_back=(837,561,300,70), name="g_reject_click")
 	# 勾玉 
-	I_G_JADE = RuleImage(roi_front=(661,466,43,46), roi_back=(661,466,43,46), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_jade.png")
+	I_G_JADE = RuleImage(roi_front=(661,466,43,46), roi_back=(550,450,200,110), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_jade.png")
 	# 猫粮 
-	I_G_CAT_FOOD = RuleImage(roi_front=(565,463,59,65), roi_back=(565,463,59,65), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_cat_food.png")
+	I_G_CAT_FOOD = RuleImage(roi_front=(565,463,59,65), roi_back=(550,450,200,110), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_cat_food.png")
 	# 狗粮 
-	I_G_DOG_FOOD = RuleImage(roi_front=(565,464,60,63), roi_back=(565,464,60,63), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_dog_food.png")
+	I_G_DOG_FOOD = RuleImage(roi_front=(565,464,60,63), roi_back=(550,450,200,110), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_dog_food.png")
 	# 忽略 
-	I_G_IGNORE = RuleImage(roi_front=(773,116,21,21), roi_back=(759,102,48,48), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_ignore.png")
+	I_G_IGNORE = RuleImage(roi_front=(773,116,21,21), roi_back=(759,65,85,85), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_g_ignore.png")
 	# 网络异常 
 	I_NETWORK_ABNORMAL = RuleImage(roi_front=(583,330,221,67), roi_back=(583,330,221,67), threshold=0.8, method="Template matching", file="./tasks/GlobalGame/gg/gg_network_abnormal.png")
 	# 已端口游戏服务器，需要重新连接，这种情况一般是断开很久了 

@@ -94,5 +94,17 @@
     "roiFront": "380,120,70,30",
     "roiBack": "380,120,70,30",
     "description": "当前选择 的极地鬼层数"
+  },
+  {
+    "itemName": "ab_loadout_open",
+    "roiFront": "1176,348,65,65",
+    "roiBack": "1176,348,65,65",
+    "description": "点击地域鬼王详情右侧的整个队伍预设图标"
+  },
+  {
+    "itemName": "ab_loadout_dismiss",
+    "roiFront": "1187,439,15,12",
+    "roiBack": "1187,439,15,12",
+    "description": "点击预设窗口右侧的空白处"
   }
 ]

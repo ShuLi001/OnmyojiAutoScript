@@ -5,10 +5,15 @@ import asyncio
 import json
 from urllib.parse import quote
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Query
+from pydantic import BaseModel, Field
+from typing import Literal
+from datetime import date, timedelta, timezone
+from starlette.concurrency import run_in_threadpool
 from fastapi.responses import Response, StreamingResponse
 from fastapi import WebSocket, WebSocketDisconnect
 from datetime import datetime
+from module.config.realm_status import read_realm_timers
 from module.config.utils import convert_to_underscore
 
 from module.logger import logger
@@ -29,6 +34,8 @@ from tasks.Component.config_base import TimeDelta
 
 
 script_app = APIRouter(route_class=ApiLoggingRoute)
+from module.server.asset_capture_service import AssetCaptureService
+asset_capture_service = AssetCaptureService(mm)
 
 
 @script_app.get('/test')
@@ -199,7 +206,7 @@ async def config_rename(old_name: str = '', new_name: str = ''):
         return False
     if old_name in mm.script_process:
         if mm.script_process[old_name].state != ScriptState.INACTIVE:
-            mm.script_process[old_name].stop()
+            await mm.script_process[old_name].stop()
         del mm.script_process[old_name]
     if not mm.rename(old_name, new_name):
         raise HTTPException(status_code=400, detail='Rename failed')
@@ -217,7 +224,7 @@ async def config_delete(name: str = ''):
         raise HTTPException(status_code=400, detail='Delete failed')
     if name in mm.script_process:
         if mm.script_process[name].state != ScriptState.INACTIVE:
-            mm.script_process[name].stop()
+            await mm.script_process[name].stop()
         del mm.script_process[name]
     if not mm.delete(name):
         raise HTTPException(status_code=400, detail='Delete failed')
@@ -249,16 +256,105 @@ async def task_group_copy(task_name: str, group_name: str, dest_config_name: str
 async def script_start(script_name: str):
     if script_name not in mm.script_process:
         mm.script_process[script_name] = ScriptProcess(script_name)
-    mm.script_process[script_name].start()
+    await mm.script_process[script_name].start()
     return
 
 @script_app.get('/{script_name}/stop')
 async def script_stop(script_name: str):
+    asset_capture_service.cancel(script_name)
     if script_name not in mm.script_process:
         logger.warning(f'[{script_name}] script process does not exist')
         return
-    mm.script_process[script_name].stop()
+    await mm.script_process[script_name].stop()
     return
+
+
+@script_app.get('/{script_name}/realm_status')
+def script_realm_status(script_name: str, response: Response):
+    if script_name not in mm.all_script_files():
+        raise HTTPException(status_code=404, detail='配置不存在')
+    response.headers['Cache-Control'] = 'no-store'
+    return read_realm_timers(mm.config_cache(script_name))
+
+
+@script_app.get('/{script_name}/asset_snapshot')
+async def script_asset_snapshot(script_name: str, response: Response,
+                                compare: Literal['previous', 'seven_days'] = 'previous'):
+    """Return the latest completed asset snapshot for an OAS profile."""
+    from tasks.AssetSnapshot.statistics import latest_payload
+    response.headers['Cache-Control'] = 'no-store'
+    def read():
+        store = asset_store(script_name)
+        store.load()
+        from tasks.AssetSnapshot.repository import STATISTICS_TZ
+        today = datetime.now(STATISTICS_TZ).date()
+        since = datetime.combine(today - timedelta(days=7), datetime.min.time(), tzinfo=STATISTICS_TZ)
+        documents = store.repository.documents(since=since, include_latest=True)
+        result = latest_payload(documents, store.repository.identity_id, compare)
+        from tasks.AssetSnapshot.capture import CaptureQueue
+        result['capture'] = CaptureQueue(store.repository).get()
+        return result
+    return await run_in_threadpool(read)
+
+
+def asset_store(script_name):
+    from tasks.AssetSnapshot.capture import store_for
+    if script_name not in mm.all_script_files():
+        raise HTTPException(status_code=404, detail='配置不存在')
+    return store_for(mm.config_cache(script_name))
+
+
+@script_app.get('/{script_name}/asset_snapshot/history')
+async def script_asset_history(script_name: str, response: Response, asset: str,
+                               days: int = Query(7, ge=1, le=31),
+                               as_of_snapshot_id: int | None = Query(None, ge=1), report_date: date | None = None):
+    from tasks.AssetSnapshot.statistics import history
+    from tasks.AssetSnapshot.repository import STATISTICS_TZ
+    response.headers['Cache-Control'] = 'no-store'
+    def read():
+        store = asset_store(script_name)
+        if asset not in store.variables:
+            raise HTTPException(status_code=422, detail='未知资产')
+        store.load()
+        end = report_date or datetime.now(STATISTICS_TZ).date()
+        since = datetime.combine(end - timedelta(days=days), datetime.min.time(), tzinfo=STATISTICS_TZ)
+        try:
+            documents = store.repository.documents(as_of_snapshot_id, since)
+        except KeyError as error:
+            raise HTTPException(status_code=404, detail=str(error))
+        result = history(documents, asset, end.isoformat(), days)
+        if as_of_snapshot_id:
+            result['window']['asOfSnapshotId'] = as_of_snapshot_id
+        return result
+    return await run_in_threadpool(read)
+
+
+class AssetCaptureBody(BaseModel):
+    idempotencyKey: str = Field(min_length=8, max_length=128)
+
+
+@script_app.post('/{script_name}/asset_snapshot/captures', status_code=202)
+async def script_asset_capture(script_name: str, body: AssetCaptureBody, response: Response):
+    from tasks.AssetSnapshot.capture import CaptureQueue
+    response.headers['Cache-Control'] = 'no-store'
+    def submit():
+        try:
+            return CaptureQueue(asset_store(script_name).repository).submit(body.idempotencyKey)
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail=str(error))
+    result = await run_in_threadpool(submit)
+    result['statusUrl'] = f'/{quote(script_name)}/asset_snapshot/captures/{result["requestId"]}'
+    return result
+
+
+@script_app.get('/{script_name}/asset_snapshot/captures/{request_id}')
+async def script_asset_capture_status(script_name: str, request_id: str, response: Response):
+    from tasks.AssetSnapshot.capture import CaptureQueue
+    response.headers['Cache-Control'] = 'no-store'
+    result = await run_in_threadpool(lambda: CaptureQueue(asset_store(script_name).repository).get(request_id))
+    if result is None:
+        raise HTTPException(status_code=404, detail='采集请求不存在')
+    return result
 
 @script_app.get('/{script_name}/{task}/args')
 async def script_task(script_name: str, task: str):
@@ -295,7 +391,30 @@ async def script_task(script_name: str, task: str, group: str, argument: str, ty
     except Exception as e:
         # 类型不正确
         raise HTTPException(status_code=400, detail=f'Argument type error: {e}')
-    return mm.config_cache(script_name).model.script_set_arg(task, group, argument, value)
+    model = mm.config_cache(script_name).model
+    if task.lower() == 'script' and group == 'desktop' and argument == 'launch_instance' and value is True:
+        from filelock import Timeout
+        from module.config.utils import configured_device_id
+        from tasks.AssetSnapshot.capture import device_lock
+
+        def launch():
+            try:
+                with device_lock(configured_device_id(model)).acquire(timeout=0):
+                    return model.script_set_arg(task, group, argument, value)
+            except Timeout:
+                logger.warning(f'[{script_name}] 设备正在被脚本使用，跳过手动启动')
+                return False
+
+        return await run_in_threadpool(launch)
+    return model.script_set_arg(task, group, argument, value)
+
+
+@script_app.get('/{script_name}/{task}/next_run_preview')
+async def preview_next_run(script_name: str, task: str):
+    if script_name not in mm.all_script_files():
+        raise HTTPException(status_code=404, detail='Config not found')
+    next_run = mm.config_cache(script_name).preview_task_next_run(task)
+    return next_run.strftime('%Y-%m-%d %H:%M:%S') if next_run is not None else None
 
 
 @script_app.put('/{script_name}/{task}/sync_next_run')

@@ -35,7 +35,7 @@ class HyaDevice(BaseTask):
         Handle.__init__ returns early without creating root_node when
         config.script.device.handle is empty. This rebuilds it on demand.
         """
-        if hasattr(self.device, 'root_node'):
+        if self.device.is_desktop or hasattr(self.device, 'root_node'):
             return
         from module.config.config import Config
         root_handle = self.device.config.script.device.handle
@@ -68,7 +68,9 @@ class HyaDevice(BaseTask):
         self._ensure_root_node()
         self.hya_screenshot_interval.wait()
         self.hya_screenshot_interval.reset()
-        if hasattr(self.device, 'root_node'):
+        if self.device.is_desktop:
+            self.device.screenshot()
+        elif hasattr(self.device, 'root_node'):
             self.device.image = self.device.screenshot_window_background() if screenshot == ScreenshotMethod.WINDOW_BACKGROUND else self.device.screenshot_nemu_ipc()
         else:
             logger.warning('root_node unavailable, falling back to standard screenshot')
@@ -87,25 +89,27 @@ class HyaDevice(BaseTask):
 
     def fast_click(self, x: int, y: int, control_method: ControlMethod = ControlMethod.WINDOW_MESSAGE) -> None:
         self._ensure_root_node()
-        logger.info(
-            'Click %s @ %s' % (point2str(x, y), 'Click')
-        )
-        if not hasattr(self.device, 'root_node'):
+        if self.device.is_desktop:
+            self.device.click_window_message(x=x, y=y, fast=True)
+        elif not hasattr(self.device, 'root_node'):
             logger.warning('root_node unavailable, falling back to standard click')
             self.device.click(x, y)
             return
-        if control_method == ControlMethod.MINITOUCH:
+        elif control_method == ControlMethod.MINITOUCH:
             try:
                 self.device.click_minitouch(x=x, y=y)
             except AttributeError:
                 logger.warning('click_minitouch failed, falling back to standard click')
                 self.device.click(x, y)
+                return
         else:
             try:
                 self.device.click_window_message(x=x, y=y, fast=True)
             except AttributeError:
                 logger.warning('click_window_message failed, falling back to standard click')
                 self.device.click(x, y)
+                return
+        logger.info(f'Click {point2str(x, y)} @ Hyakkiyakou')
 
     def set_fast_screenshot_interval(self, interval: float):
         """

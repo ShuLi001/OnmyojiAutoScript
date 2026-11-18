@@ -69,7 +69,7 @@ class Control(Minitouch, Adb, Scrcpy, Window):
         x, y = ensure_int(x, y)
         self._invalidate_image_batch_cache()
         method = self.click_methods.get(
-            self.config.script.device.control_method,
+            self._active_control_method,
             self.click_adb
         )
         start = time.perf_counter()
@@ -112,7 +112,7 @@ class Control(Minitouch, Adb, Scrcpy, Window):
         duration = ensure_time(duration)
         self._invalidate_image_batch_cache()
         method = self.long_click_methods.get(
-            self.config.script.device.control_method,
+            self._active_control_method,
             self.long_click_adb)
         start = time.perf_counter()
         method(x, y, duration)
@@ -123,7 +123,7 @@ class Control(Minitouch, Adb, Scrcpy, Window):
         self.handle_control_check(control_name)
         p1, p2 = ensure_int(p1, p2)
         duration = ensure_time(duration)
-        method = self.config.script.device.control_method
+        method = self._active_control_method
         swipe_log = None
         if method == 'minitouch':
             swipe_log = 'Swipe %s -> %s' % (point2str(*p1), point2str(*p2))
@@ -204,9 +204,12 @@ class Control(Minitouch, Adb, Scrcpy, Window):
         self.handle_control_check(name)
         p1, p2 = ensure_int(p1, p2)
         drag_log = 'Drag %s -> %s' % (point2str(*p1), point2str(*p2))
-        method = self.config.script.emulator.control_method
+        method = self._active_control_method
         start = time.perf_counter()
-        if method == 'minitouch':
+        if self.is_desktop:
+            self._invalidate_image_batch_cache()
+            self.swipe_window_message(p1, p2)
+        elif method == 'minitouch':
             self.drag_minitouch(p1, p2, point_random=point_random)
         elif method == 'uiautomator2':
             self.drag_uiautomator2(
@@ -223,3 +226,7 @@ class Control(Minitouch, Adb, Scrcpy, Window):
             # self.click(Button(area=(), color=(), button=area_offset(point_random, p2), name=name))
         elapsed = time.perf_counter() - start
         logger.info(f'{self._format_action_duration(elapsed)}{drag_log}')
+
+    @property
+    def _active_control_method(self):
+        return 'window_message' if self.is_desktop else self.config.script.device.control_method

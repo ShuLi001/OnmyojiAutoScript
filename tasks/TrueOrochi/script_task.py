@@ -155,7 +155,8 @@ class ScriptTask(OrochiScriptTask, TrueOrochiAssets):
         self.limit_time = timedelta(hours=10)
         # 切换十层御魂
         if self.config.true_orochi.switch_soul.enable_switch_layer_soul:
-            self.switch_orochi_souls()
+            if not self.switch_orochi_souls():
+                return False
             self.goto_page(page_orochi)
         while True:
             self.screenshot()

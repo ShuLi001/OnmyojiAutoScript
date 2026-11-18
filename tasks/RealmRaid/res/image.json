@@ -1,5 +1,32 @@
 [
   {
+    "itemName": "raid_loadout_panel_border",
+    "imageName": "res_raid_loadout_panel_border.png",
+    "roiFront": "1146,539,39,20",
+    "roiBack": "1138,531,55,36",
+    "method": "Template matching",
+    "threshold": 0.9,
+    "description": "个人突破和寮突破队伍预设面板右下边框"
+  },
+  {
+    "itemName": "raid_loadout_entry",
+    "imageName": "res_raid_loadout_entry.png",
+    "roiFront": "1206,533,44,45",
+    "roiBack": "1189,512,85,80",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "突破页右侧的队伍预设图标"
+  },
+  {
+    "itemName": "raid_loadout_incomplete",
+    "imageName": "res_raid_loadout_incomplete.png",
+    "roiFront": "799,521,318,20",
+    "roiBack": "759,490,396,81",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "突破队伍预设人数不足时替代出战按钮的提示"
+  },
+  {
     "itemName": "realm_raid",
     "imageName": "res_realm_raid.png",
     "roiFront": "246,628,63,64",

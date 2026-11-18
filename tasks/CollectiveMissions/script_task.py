@@ -112,7 +112,8 @@ class ScriptTask(GameUi, CollectiveMissionsAssets):
         }
         # 滑动到最多的材料
         random_click = [self.I_CM_ADD_1, self.I_CM_ADD_2, self.I_CM_ADD_3, self.I_CM_ADD_4]
-        window_control = self.config.script.device.control_method == 'window_message'
+        # 该绕过仅针对模拟器的窗口消息滑动。
+        window_control = not self.device.is_desktop and self.config.script.device.control_method == 'window_message'
         swipe_count = 0
         click_count = 0
         while 1:

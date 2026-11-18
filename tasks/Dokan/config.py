@@ -9,6 +9,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field, field_validator
 
+from module.config.weekly_schedule import WeeklyRunTimes
 from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
 from tasks.Component.SwitchSoul.switch_soul_config import SwitchSoulConfig
 from tasks.Component.config_base import ConfigBase, Time, dynamic_hide
@@ -157,3 +158,9 @@ class Dokan(ConfigBase):
     dokan_member_switch_soul: SwitchSoulConfig = Field(default_factory=SwitchSoulConfig)
     dokan_owner_switch_soul: SwitchSoulConfig = Field(default_factory=SwitchSoulConfig)
     attack_count_config: AttackAccountConfig = Field(default_factory=AttackAccountConfig)
+
+    @property
+    def weekly_run_times(self) -> WeeklyRunTimes:
+        if not self.dokan_config.monday_to_thursday:
+            return ()
+        return tuple((day, self.dokan_config.dokan_run_time) for day in range(4))

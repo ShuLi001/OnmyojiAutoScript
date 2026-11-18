@@ -2,25 +2,22 @@
 # @author runhey
 # github https://github.com/runhey
 from time import sleep
-from datetime import timedelta, datetime, time
-from cached_property import cached_property
+from datetime import datetime
 
 from module.exception import TaskEnd
 from module.logger import logger
 from module.base.timer import Timer
+from module.config.weekly_schedule import next_weekly_run
 
 from tasks.GameUi.game_ui import GameUi
-from tasks.GameUi.page import page_main, page_hunt, page_shikigami_records, page_guild
+from tasks.GameUi.page import page_main, page_guild
 from tasks.Component.GeneralBattle.general_battle import GeneralBattle
 from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
-from tasks.Component.GeneralInvite.general_invite import GeneralInvite
-from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
-from tasks.DemonRetreat.assets import DemonRetreatAssets
-from tasks.AbyssShadows.assets import AbyssShadowsAssets
 from tasks.DemonRetreat.config import DemonRetreat
+from tasks.DemonRetreat.quick_loadout import DemonRetreatQuickLoadout
 
 
-class ScriptTask(GameUi, GeneralBattle, SwitchSoul, DemonRetreatAssets, AbyssShadowsAssets):
+class ScriptTask(GameUi, GeneralBattle, DemonRetreatQuickLoadout):
 
     def run(self):
         """
@@ -31,19 +28,23 @@ class ScriptTask(GameUi, GeneralBattle, SwitchSoul, DemonRetreatAssets, AbyssSha
             logger.warning("Demon retreat is not available now")
             self.set_next_run(task='DemonRetreat', server=False, target=self.get_next_dt(datetime.now()))
             raise TaskEnd
-        if cfg.switch_soul_config.enable:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul(cfg.switch_soul_config.switch_group_team)
-        if cfg.switch_soul_config.enable_switch_by_name:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul_by_name(cfg.switch_soul_config.group_name, cfg.switch_soul_config.team_name)
-
-        # 进入妖怪退治
+        # 进入首领退治
         if not self.goto_demon_retreat():
             logger.warning("Failed to enter demon retreat")
             if self.appear_then_click(self.I_DEMON_BACK_CHECK, interval=1):
                 pass
             self.goto_page(page_main)
+            self.set_next_run(task='DemonRetreat', server=False, target=self.get_next_dt(datetime.now()))
+            raise TaskEnd
+
+        try:
+            target = cfg.get_lineup()
+            lineup_ready = target is None or self.apply_activity_loadout(target)
+        except ValueError as error:
+            logger.warning(f'首领退治阵容配置无效：{error}')
+            lineup_ready = False
+        if not lineup_ready:
+            logger.warning('首领退治阵容未应用，结束本轮挑战')
             self.set_next_run(task='DemonRetreat', server=False, target=self.get_next_dt(datetime.now()))
             raise TaskEnd
 
@@ -78,6 +79,10 @@ class ScriptTask(GameUi, GeneralBattle, SwitchSoul, DemonRetreatAssets, AbyssSha
         """
         cfg: DemonRetreat = self.config.demon_retreat
         logger.info("Entering demon_retreat")
+        self.screenshot()
+        if self.appear(self.I_HUNT_CHECK):
+            self.appear_then_click(self.I_QUIT_BACK, interval=1)
+            return True
         self.goto_page(page_guild)
 
         goto_demon_retreat_num = 0
@@ -145,20 +150,15 @@ class ScriptTask(GameUi, GeneralBattle, SwitchSoul, DemonRetreatAssets, AbyssSha
         重写通用战斗
         三轮战斗 战斗过程中检测挑战
         """
-        # TODO 战斗过程中切换预设
         logger.hr("General battle start", 2)
         self.current_count += 1
         logger.info(f"Current count: {self.current_count}")
         if config is None:
             config = GeneralBattleConfig()
 
-        # 如果没有锁定队伍。那么可以根据配置设定队伍
+        # 未锁定队伍时，等待准备界面并确认。
         if not config.lock_team_enable:
             logger.info("Lock team is not enable")
-            # 如果更换队伍
-            if self.current_count == 1:
-                self.switch_preset_team(config.preset_enable, config.preset_group, config.preset_team)
-
             # 点击准备按钮
             self.wait_until_appear(self.I_PREPARE_HIGHLIGHT)
             self.wait_until_appear(self.I_BUFF)
@@ -220,19 +220,14 @@ class ScriptTask(GameUi, GeneralBattle, SwitchSoul, DemonRetreatAssets, AbyssSha
 
     def get_next_dt(self, now: datetime, success: bool = False) -> datetime:
         """获取下一次退治运行时间"""
-        rt = self.config.model.demon_retreat.demon_retreat_time.custom_run_time
-        scheduler = self.config.model.demon_retreat.scheduler
-        if now.weekday() != 5:
-            return datetime.combine(now + timedelta(days=(5 - now.weekday() + 7) % 7), rt)
-        target_dt = datetime.combine(now.date(), rt)
-        # 在1小时之内则间隔failure_interval后重试
-        if target_dt <= now < target_dt + timedelta(hours=1) and not success:
-            return now + scheduler.failure_interval
-        return target_dt + timedelta(days=7)
+        cfg = self.config.model.demon_retreat
+        return next_weekly_run(
+            cfg.weekly_run_times, now, retry_delay=cfg.scheduler.failure_interval, skip_today=success,
+        )
 
     def check_date(self, now: datetime) -> bool:
         """检查当前日期是否可以运行退治"""
-        return now.weekday() == 5
+        return any(day == now.weekday() for day, _ in self.config.model.demon_retreat.weekly_run_times)
 
 
 if __name__ == '__main__':

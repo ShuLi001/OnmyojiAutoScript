@@ -1,6 +1,7 @@
 from tasks.GameUi.assets import GameUiAssets
 from tasks.GameUi.page import (
     Page,
+    any_of,
     page_act_list,
     page_battle,
     page_battle_result,
@@ -16,15 +17,15 @@ page_act_list_meta_demon = Page(MetaDemonAssets.I_CHECK_ACT_LIST_METADEMON_ACT)
 page_act_list.connect(page_act_list_meta_demon, MetaDemonAssets.L_GOTO_METADEMON_LIST, key="page_act_list->page_act_list_meta_demon")
 page_act_list_meta_demon.connect(page_main, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_act_list_meta_demon->page_main")
 
-page_meta_demon = Page(MetaDemonAssets.I_MD_CHECK_MAIN_PAGE)
+page_meta_demon = Page(any_of(MetaDemonAssets.I_MD_CHECK_MAIN_PAGE, MetaDemonAssets.I_MD_CHECK_MAIN_PAGE_WHITE))
 page_meta_demon.add_enter_success_hooks(MetaDemonAssets.I_MD_GET_YESTERDAY_REWARD, MetaDemonAssets.I_MD_CLOSE_POPUP)
-page_meta_demon.connect(page_act_list_meta_demon, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_meta_demon->page_act_list_meta_demon")
+page_meta_demon.connect(page_main, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_meta_demon->page_main")
 page_act_list_meta_demon.connect(page_meta_demon, GameUiAssets.I_ACT_LIST_GOTO_ACT, key="page_act_list_meta_demon->page_meta_demon")
 
-page_meta_demon_boss = Page(MetaDemonAssets.I_CHECK_BOSS_PAGE)
-page_meta_demon_boss.add_enter_success_hooks(MetaDemonAssets.I_MD_CLOSE_POPUP)
+page_meta_demon_boss = Page(any_of(MetaDemonAssets.I_CHECK_BOSS_PAGE_SMALL, MetaDemonAssets.I_CHECK_BOSS_PAGE))
+page_meta_demon_boss.add_enter_success_hooks(MetaDemonAssets.I_MD_CLAIM_HUNT_REWARD, MetaDemonAssets.I_MD_CLOSE_POPUP)
 page_meta_demon_boss.connect(page_meta_demon, GlobalGameAssets.I_UI_BACK_YELLOW, key="page_meta_demon_boss->page_meta_demon")
-page_meta_demon.connect(page_meta_demon_boss, MetaDemonAssets.I_MD_CHECK_MAIN_PAGE, key="page_meta_demon->page_meta_demon_boss")
+page_meta_demon.connect(page_meta_demon_boss, MetaDemonAssets.C_MD_ENTER_BOSS, key="page_meta_demon->page_meta_demon_boss")
 
 page_reward.connect(page_meta_demon_boss, random_click(), key="page_reward->page_meta_demon_boss")
 page_battle_result.connect(page_meta_demon_boss, random_click(), key="page_battle_result->page_meta_demon_boss")

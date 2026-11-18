@@ -180,6 +180,10 @@ class ScriptRuntimeController:
         if self.emulator_down or 'device' in self.script.__dict__:
             return
 
+        if self.config.script.desktop.enable:
+            self.emulator_down = not self.device.app_is_alive()
+            return
+
         try:
             online = self._build_platform_probe().probe_target_instance_online()
         except Exception as e:
@@ -278,6 +282,11 @@ class ScriptRuntimeController:
         """
         确保模拟器已启动，但游戏处于关闭状态。
         """
+        if self.config.script.desktop.enable:
+            if self.device.app_is_alive() and not self.device.desktop_stop_client():
+                raise RequestHumanTakeover('空闲时无法关闭桌面客户端')
+            return ScriptRuntimeDecision.READY
+
         self._ensure_emulator_running('Wake emulator before ensuring close_game state')
         if self.device.app_is_running():
             logger.info('Ensure game is closed during wait')
@@ -519,7 +528,9 @@ class ScriptRuntimeController:
 
         if close_emulator_limit > timedelta(0) and next_run > datetime.now() + close_emulator_limit:
             logger.info('Close emulator during wait')
-            self.device.emulator_stop()
+            stopped = self.device.emulator_stop()
+            if self.config.script.desktop.enable and not stopped:
+                raise RequestHumanTakeover('空闲时无法关闭桌面客户端')
             self.emulator_down = True
             return self._wait_until_with_emulator_preheat(next_run, on_wake=on_wake)
 

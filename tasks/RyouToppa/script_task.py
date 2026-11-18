@@ -5,13 +5,13 @@ import time
 from datetime import datetime, timedelta, time as dt_time
 import random
 
-from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
 from tasks.RyouToppa.assets import RyouToppaAssets
 from tasks.Component.GeneralBattle.general_battle import GeneralBattle
 from tasks.Component.config_base import ConfigBase, Time
 from tasks.GameUi.game_ui import GameUi
-from tasks.GameUi.page import page_realm_raid, page_main, page_kekkai_toppa, page_shikigami_records
+from tasks.GameUi.page import page_realm_raid, page_main, page_kekkai_toppa
 from tasks.RealmRaid.assets import RealmRaidAssets
+from tasks.RealmRaid.quick_loadout import RaidQuickLoadout
 
 from module.logger import logger
 from module.exception import TaskEnd
@@ -73,7 +73,9 @@ def random_delay(min_value: float = 1.0, max_value: float = 2.0, decimal: int = 
     return round(random_float_in_range, decimal)
 
 
-class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RyouToppaAssets):
+class ScriptTask(GeneralBattle, GameUi, RaidQuickLoadout, RyouToppaAssets):
+    LOADOUT_TASK_NAME = '寮突破'
+    RAID_PAGE_CHECK = GameUi.I_KEKKAI_TOPPA
     medal_grid: ImageGrid = None
 
     def run(self):
@@ -86,14 +88,6 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RyouToppaAssets):
         time_delta = timedelta(hours=time_limit.hour, minutes=time_limit.minute, seconds=time_limit.second)
         self.medal_grid = ImageGrid([RealmRaidAssets.I_MEDAL_5, RealmRaidAssets.I_MEDAL_4, RealmRaidAssets.I_MEDAL_3,
                                      RealmRaidAssets.I_MEDAL_2, RealmRaidAssets.I_MEDAL_1, RealmRaidAssets.I_MEDAL_0])
-
-        if ryou_config.switch_soul_config.enable:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul(ryou_config.switch_soul_config.switch_group_team)
-
-        if ryou_config.switch_soul_config.enable_switch_by_name:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul_by_name(ryou_config.switch_soul_config.group_name, ryou_config.switch_soul_config.team_name)
 
         self.goto_page(page_kekkai_toppa)
         ryou_toppa_start_flag = True
@@ -143,6 +137,10 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, RyouToppaAssets):
         if ryou_toppa_success_penetration:
             logger.info('RyouToppa is 100%')
             self.plan_tomorrow_ryoutoppa()
+            raise TaskEnd
+        if not self.apply_raid_loadout(ryou_config.general_battle_config):
+            self.set_next_run(task='RyouToppa', finish=True, server=True, success=False)
+            self.goto_page(page_main)
             raise TaskEnd
         if self.config.ryou_toppa.general_battle_config.lock_team_enable:
             logger.info("Lock team.")

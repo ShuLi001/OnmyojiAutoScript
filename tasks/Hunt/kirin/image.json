@@ -25,5 +25,14 @@
     "method": "Template matching",
     "threshold": 0.8,
     "description": "麒麟已挑战"
+  },
+  {
+    "itemName": "kirin_loadout_entry",
+    "imageName": "kirin_kirin_loadout_entry.png",
+    "roiFront": "946,637,36,36",
+    "roiBack": "924,619,81,72",
+    "method": "Template matching",
+    "threshold": 0.9,
+    "description": "麒麟页面底部的队伍预设图标"
   }
 ]

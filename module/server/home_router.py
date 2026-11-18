@@ -65,6 +65,8 @@ async def notify_test(setting: str, title: str, content: str):
 
 @home_app.get('/kill_server')
 async def kill_server():
+    from module.server.script_router import asset_capture_service
+    await asset_capture_service.close()
     shutdown_image_server()
     shutdown_ocr_server()
     MainManager.signal_kill_server = True

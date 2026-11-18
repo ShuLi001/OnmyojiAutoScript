@@ -1,0 +1,14 @@
+[
+  {
+    "itemName": "dr_loadout_open",
+    "roiFront": "850,604,74,64",
+    "roiBack": "850,604,74,64",
+    "description": "点击首领退治底部的队伍预设"
+  },
+  {
+    "itemName": "dr_loadout_dismiss",
+    "roiFront": "1062,388,66,34",
+    "roiBack": "1062,388,66,34",
+    "description": "点击预设面板右侧的空白背景"
+  }
+]

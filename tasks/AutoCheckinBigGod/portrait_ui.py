@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 from module.logger import logger
 from module.base.timer import Timer
+from module.base.utils import point2str
 from tasks.base_task import BaseTask
 
 GL_PACKAGE = "com.netease.gl"
@@ -42,8 +43,8 @@ class PortraitUIMixin(BaseTask):
 
     def _tap(self, x, y, name=None):
         """竖屏点击：adb input tap 直传原始坐标，与 control_method 无关。"""
-        logger.info(f'点击 {name} @ ({x},{y})')
         self._adb_shell(['input', 'tap', str(x), str(y)])
+        logger.info(f'Click {point2str(x, y)} @ {name or "Click"}')
 
     def _swipe(self, x1, y1, x2, y2, duration=400):
         """竖屏滑动：adb input swipe 直传原始坐标，与 control_method 无关。

@@ -9,24 +9,25 @@ from tasks.Component.GeneralBattle.general_battle import GeneralBattle, ExitMatc
 from tasks.Component.GeneralInvite.general_invite import GeneralInvite
 from tasks.Component.GeneralBuff.general_buff import GeneralBuff
 from tasks.Component.GeneralRoom.general_room import GeneralRoom
-from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
+from tasks.Component.QuickLoadout.dungeon import DungeonQuickLoadout
 from tasks.GameUi.default_pages import page_reward
 from tasks.GameUi.game_ui import GameUi
 from tasks.GameUi.matcher import any_of
-from tasks.GameUi.page import page_main, page_awake_zones, page_shikigami_records
+from tasks.GameUi.page import page_main, page_awake_zones
 from tasks.EvoZone.assets import EvoZoneAssets
 from tasks.EvoZone.config import EvoZone, UserStatus, KirinType
 from module.logger import logger
 from module.exception import TaskEnd
 
 
-class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi, EvoZoneAssets, SwitchSoul):
+class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi, EvoZoneAssets, DungeonQuickLoadout):
+    LOADOUT_TASK_NAME = '觉醒'
 
     def _register_custom_pages(self) -> None:
         reward_page = self.navigator.resolve_page(page_reward)
         if reward_page is None:
             return
-        reward_page.recognizer = any_of(self.I_GI_SURE, reward_page.recognizer)
+        reward_page.recognizer = any_of(self.INVITE_AGAIN_POPUP, reward_page.recognizer)
 
     def _handle_reward(self, context: BattleContext, config: GeneralBattleConfig) -> BattleAction:
         # 无论胜利与否, 都会出现是否邀请一次队友, 区别在于, 失败的话不会出现那个勾选默认邀请的框
@@ -34,6 +35,9 @@ class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi,
             self.check_and_invite(self.config.evo_zone.invite_config.default_invite):
             return BattleAction.CONTINUE
         return super()._handle_reward(context, config)
+
+    def _apply_prepare_preset(self, config: GeneralBattleConfig) -> None:
+        self._apply_first_dungeon_battle_preset()
 
     def run(self) -> bool:
 
@@ -43,16 +47,27 @@ class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi,
         self.limit_count: int = limit_count
         self.limit_time: timedelta = timedelta(hours=limit_time.hour, minutes=limit_time.minute,
                                                seconds=limit_time.second)
-        con = self.config.evo_zone
-        if con.switch_soul_config.enable:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul(con.switch_soul_config.switch_group_team)
-        if con.switch_soul_config.enable_switch_by_name:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul_by_name(con.switch_soul_config.group_name, con.switch_soul_config.team_name)
-
-        self.goto_page(page_main)
         config: EvoZone = self.config.evo_zone
+        role = config.evo_zone_config.user_status
+        member = role == UserStatus.MEMBER
+
+        def enter_loadout_page():
+            self.goto_page(page_awake_zones)
+            self.evozone_enter()
+            layer = config.evo_zone_config.layer
+            if not self.check_layer(layer):
+                logger.warning(f'未找到觉醒层数：{layer}')
+                return False
+            return True
+
+        if not self.apply_dungeon_loadout(config.general_battle_config.get_lineup, enter_loadout_page,
+                                          member=member, team_battle=role in (UserStatus.LEADER, UserStatus.MEMBER)):
+            self.set_next_run('EvoZone', finish=False, success=False)
+            self.goto_page(page_main)
+            raise TaskEnd
+
+        if member or config.evo_zone_config.soul_buff_enable:
+            self.goto_page(page_main)
         if config.evo_zone_config.soul_buff_enable:
             self.open_buff()
             self.awake(is_open=True)

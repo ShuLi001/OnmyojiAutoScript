@@ -601,6 +601,9 @@ class GeneralBattle(GeneralBuff, GeneralBattleAssets):
         settlement = {page_battle_result, page_reward}
         return page in settlement or context.last_page in settlement
 
+    def _apply_prepare_preset(self, config: GeneralBattleConfig) -> None:
+        self.switch_preset_team(config.preset_enable, config.preset_group, config.preset_team)
+
     def _handle_prepare(self, context: BattleContext, config: GeneralBattleConfig) -> BattleAction:
         """处理准备页逻辑。
 
@@ -625,7 +628,7 @@ class GeneralBattle(GeneralBuff, GeneralBattleAssets):
 
         self._run_battle_behavior_once(
             behavior_name="preset",
-            action=lambda: self.switch_preset_team(config.preset_enable, config.preset_group, config.preset_team),
+            action=lambda: self._apply_prepare_preset(config),
         )
         self._run_battle_behavior_once(
             behavior_name="buff",

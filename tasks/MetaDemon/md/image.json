@@ -1,9 +1,117 @@
 [
   {
+    "itemName": "md_boss_star_purple",
+    "imageName": "md_boss_star_purple.png",
+    "roiFront": "65,205,11,12",
+    "roiBack": "52,203,70,16",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "description": "自己发现头像底部的紫色亮星标，用于逐格匹配"
+  },
+  {
+    "itemName": "md_ticket_queue_title",
+    "imageName": "md_ticket_queue_title.png",
+    "roiFront": "438,148,359,47",
+    "roiBack": "430,140,375,63",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "召唤队列标题"
+  },
+  {
+    "itemName": "md_ticket_queue_go",
+    "imageName": "md_ticket_queue_go.png",
+    "roiFront": "917,513,58,26",
+    "roiBack": "908,505,76,37",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "召唤队列底部前往按钮"
+  },
+  {
+    "itemName": "md_ticket_queue_close",
+    "imageName": "md_ticket_queue_close.png",
+    "roiFront": "1005,158,42,40",
+    "roiBack": "995,149,62,58",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "召唤队列关闭按钮"
+  },
+  {
+    "itemName": "md_ticket_queue_full",
+    "imageName": "md_ticket_queue_full.png",
+    "roiFront": "288,508,698,34",
+    "roiBack": "284,504,706,38",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "召唤队列满额时的底部空白"
+  },
+  {
+    "itemName": "md_loadout_gear",
+    "imageName": "md_loadout_gear.png",
+    "roiFront": "1220,430,38,37",
+    "roiBack": "1208,418,62,60",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "超鬼王右侧预设入口图标"
+  },
+  {
+    "itemName": "md_loadout_gear_legacy",
+    "imageName": "md_loadout_gear_legacy.png",
+    "roiFront": "1220,430,38,37",
+    "roiBack": "1208,418,62,60",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "超鬼王右侧阵容栏的旧齿轮图标"
+  },
+  {
+    "itemName": "md_loadout_fight",
+    "imageName": "md_loadout_fight.png",
+    "roiFront": "758,556,118,43",
+    "roiBack": "0,0,1280,720",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "超鬼王目标阵容可出战时的按钮"
+  },
+  {
+    "itemName": "md_loadout_incomplete",
+    "imageName": "md_loadout_incomplete.png",
+    "roiFront": "663,573,318,20",
+    "roiBack": "0,0,1280,720",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "目标阵容人数不足时的提示"
+  },
+  {
+    "itemName": "md_loadout_panel_border",
+    "imageName": "md_loadout_panel_border.png",
+    "roiFront": "995,587,55,26",
+    "roiBack": "987,579,71,42",
+    "method": "Template matching",
+    "threshold": 0.9,
+    "description": "超鬼王快捷阵容面板右下边框"
+  },
+  {
+    "itemName": "md_loadout_confirm",
+    "imageName": "md_loadout_confirm.png",
+    "roiFront": "664,407,180,65",
+    "roiBack": "638,386,232,107",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "出战时自动装配御魂的确定按钮"
+  },
+  {
+    "itemName": "md_ticket_drop_popup",
+    "imageName": "md_ticket_drop_popup.png",
+    "roiFront": "524,346,230,32",
+    "roiBack": "504,330,270,64",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "description": "门票掉落弹窗今日已获得裂变之眼文字"
+  },
+  {
     "itemName": "md_fire",
     "imageName": "md_md_fire.png",
-    "roiFront": "1132,577,99,53",
-    "roiBack": "1104,546,154,147",
+    "roiFront": "1143,601,80,44",
+    "roiBack": "1124,578,116,86",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "挑战鬼王"
@@ -45,13 +153,31 @@
     "description": "鬼王页面标志"
   },
   {
-    "itemName": "md_check_main_page",
-    "imageName": "md_md_check_main_page.png",
-    "roiFront": "464,231,39,213",
-    "roiBack": "449,220,72,244",
+    "itemName": "check_boss_page_small",
+    "imageName": "md_check_boss_page_small.png",
+    "roiFront": "1067,23,37,35",
+    "roiBack": "1054,7,62,63",
     "method": "Template matching",
     "threshold": 0.8,
-    "description": "超鬼王主界面"
+    "description": "鬼王挑战页新版小尺寸疲劳图标"
+  },
+  {
+    "itemName": "md_check_main_page",
+    "imageName": "md_md_check_main_page.png",
+    "roiFront": "896,56,46,117",
+    "roiBack": "882,42,74,145",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "description": "活动首页入口的祸主二字"
+  },
+  {
+    "itemName": "md_check_main_page_white",
+    "imageName": "md_md_check_main_page_white.png",
+    "roiFront": "896,56,46,117",
+    "roiBack": "882,42,74,145",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "description": "活动首页入口的白色祸主二字"
   },
   {
     "itemName": "md_get_yesterday_reward",
@@ -63,9 +189,18 @@
     "description": "领取昨日奖励"
   },
   {
+    "itemName": "md_claim_hunt_reward",
+    "imageName": "md_claim_hunt_reward.png",
+    "roiFront": "707,546,186,46",
+    "roiBack": "676,528,248,82",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "次日首次进入鬼王挑战页时昨日狩猎奖励的领取按钮"
+  },
+  {
     "itemName": "md_one_star",
     "imageName": "md_md_one_star.png",
-    "roiFront": "361,312,68,69",
+    "roiFront": "361,316,68,68",
     "roiBack": "261,299,754,133",
     "method": "Template matching",
     "threshold": 0.85,
@@ -74,7 +209,7 @@
   {
     "itemName": "md_two_stars",
     "imageName": "md_md_two_stars.png",
-    "roiFront": "460,314,66,67",
+    "roiFront": "460,316,68,68",
     "roiBack": "266,303,751,134",
     "method": "Template matching",
     "threshold": 0.85,
@@ -83,7 +218,7 @@
   {
     "itemName": "md_three_stars",
     "imageName": "md_md_three_stars.png",
-    "roiFront": "557,315,67,67",
+    "roiFront": "559,316,68,68",
     "roiBack": "266,302,749,129",
     "method": "Template matching",
     "threshold": 0.85,
@@ -92,7 +227,7 @@
   {
     "itemName": "md_four_stars",
     "imageName": "md_md_four_stars.png",
-    "roiFront": "656,314,71,68",
+    "roiFront": "658,316,68,68",
     "roiBack": "261,299,754,132",
     "method": "Template matching",
     "threshold": 0.85,
@@ -101,7 +236,7 @@
   {
     "itemName": "md_five_stars",
     "imageName": "md_md_five_stars.png",
-    "roiFront": "754,313,71,69",
+    "roiFront": "757,316,68,68",
     "roiBack": "267,303,749,129",
     "method": "Template matching",
     "threshold": 0.85,
@@ -110,7 +245,7 @@
   {
     "itemName": "md_six_stars",
     "imageName": "md_md_six_stars.png",
-    "roiFront": "854,314,66,69",
+    "roiFront": "856,316,68,68",
     "roiBack": "265,299,754,133",
     "method": "Template matching",
     "threshold": 0.85,
@@ -119,8 +254,8 @@
   {
     "itemName": "md_get_boss",
     "imageName": "md_md_get_boss.png",
-    "roiFront": "559,446,161,49",
-    "roiBack": "514,421,242,101",
+    "roiFront": "587,456,109,29",
+    "roiBack": "554,440,174,64",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "立即召唤鬼王"
@@ -155,11 +290,11 @@
   {
     "itemName": "check_act_list_metademon_act",
     "imageName": "md_check_act_list_metademon_act.png",
-    "roiFront": "718,293,448,127",
-    "roiBack": "675,249,566,240",
+    "roiFront": "1040,90,150,500",
+    "roiBack": "1018,68,192,548",
     "method": "Template matching",
     "threshold": 0.8,
-    "description": "活动列表页超鬼王活动标志"
+    "description": "活动列表页超鬼王活动标志（祸至无日）"
   },
   {
     "itemName": "md_disable_powerful_fire",
@@ -182,8 +317,8 @@
   {
     "itemName": "md_switch_ticket",
     "imageName": "md_md_switch_ticket.png",
-    "roiFront": "1114,496,144,38",
-    "roiBack": "1112,480,148,68",
+    "roiFront": "1114,503,102,29",
+    "roiBack": "1104,491,124,53",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "切换鬼王门票"
@@ -191,8 +326,8 @@
   {
     "itemName": "md_summon_boss",
     "imageName": "md_md_summon_boss.png",
-    "roiFront": "1142,581,76,83",
-    "roiBack": "1105,546,157,154",
+    "roiFront": "1142,580,80,85",
+    "roiBack": "1126,564,112,117",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "召唤鬼王"
@@ -200,8 +335,8 @@
   {
     "itemName": "md_synthesis_one_star",
     "imageName": "md_md_synthesis_one_star.png",
-    "roiFront": "228,178,60,65",
-    "roiBack": "209,150,100,501",
+    "roiFront": "308,158,155,30",
+    "roiBack": "300,148,175,50",
     "method": "Template matching",
     "threshold": 0.85,
     "description": "合成一星"
@@ -209,8 +344,8 @@
   {
     "itemName": "md_synthesis_two_star",
     "imageName": "md_md_synthesis_two_star.png",
-    "roiFront": "226,276,61,66",
-    "roiBack": "207,152,99,500",
+    "roiFront": "308,258,155,30",
+    "roiBack": "300,248,175,50",
     "method": "Template matching",
     "threshold": 0.85,
     "description": "合成二星"
@@ -218,8 +353,8 @@
   {
     "itemName": "md_synthesis_three_star",
     "imageName": "md_md_synthesis_three_star.png",
-    "roiFront": "226,377,61,66",
-    "roiBack": "208,152,97,498",
+    "roiFront": "308,358,155,30",
+    "roiBack": "300,348,175,50",
     "method": "Template matching",
     "threshold": 0.85,
     "description": "合成三星"
@@ -227,8 +362,8 @@
   {
     "itemName": "md_synthesis_four_star",
     "imageName": "md_md_synthesis_four_star.png",
-    "roiFront": "226,477,61,68",
-    "roiBack": "208,148,96,500",
+    "roiFront": "308,458,155,30",
+    "roiBack": "300,448,175,50",
     "method": "Template matching",
     "threshold": 0.85,
     "description": "合成四星"
@@ -236,16 +371,25 @@
   {
     "itemName": "md_synthesis_five_star",
     "imageName": "md_md_synthesis_five_star.png",
-    "roiFront": "225,570,63,71",
-    "roiBack": "206,149,103,503",
+    "roiFront": "308,558,155,30",
+    "roiBack": "300,548,175,50",
     "method": "Template matching",
     "threshold": 0.85,
     "description": "合成五星"
   },
   {
+    "itemName": "md_synthesis_add_all",
+    "imageName": "md_md_synthesis_add_all.png",
+    "roiFront": "665,567,103,29",
+    "roiBack": "632,548,170,62",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "description": "合成页面一键添加"
+  },
+  {
     "itemName": "md_start_synthesis",
     "imageName": "md_md_start_synthesis.png",
-    "roiFront": "906,562,108,39",
+    "roiFront": "907,567,103,29",
     "roiBack": "884,548,155,62",
     "method": "Template matching",
     "threshold": 0.8,
@@ -281,8 +425,8 @@
   {
     "itemName": "md_synthesis",
     "imageName": "md_md_synthesis.png",
-    "roiFront": "1200,224,40,41",
-    "roiBack": "1172,199,100,100",
+    "roiFront": "1200,266,43,27",
+    "roiBack": "1172,220,100,90",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "合成标志"
@@ -290,8 +434,8 @@
   {
     "itemName": "md_synthesis_empty",
     "imageName": "md_md_synthesis_empty.png",
-    "roiFront": "800,158,72,66",
-    "roiBack": "622,144,420,407",
+    "roiFront": "806,160,60,64",
+    "roiBack": "640,140,392,410",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "合成鬼王空位"

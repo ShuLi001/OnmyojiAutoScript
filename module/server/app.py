@@ -13,7 +13,7 @@ from module.logger import logger
 from module.server.api_logger import ensure_api_logger
 from module.server.home_router import home_app
 from module.server.log_router import log_app
-from module.server.script_router import script_app
+from module.server.script_router import script_app, asset_capture_service
 from module.server.stats_router import stats_app
 from module.server.tool_router import tool_app
 from starlette import status
@@ -61,12 +61,14 @@ async def on_startup():
     :return:
     """
     ensure_api_logger()
+    await asset_capture_service.start()
     logger.info('OAS web service startup done')
     if app.state.script_instances:
         await mm.restart_processes(app.state.script_instances)
 
 
 async def on_shutdown():
+    await asset_capture_service.close()
     logger.info('OAS web service shutdown done')
 
 

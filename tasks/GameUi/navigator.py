@@ -38,6 +38,7 @@ class GameUi(ChessBattleNavigationMixin, BaseTask, GameUiAssets):
     """页面识别、导航与未知页恢复的统一入口。"""
 
     REPEATED_TRANSITION_FAILURE_THRESHOLD = 3
+    ABORT_ON_TRANSITION_FAILURE = False
 
     # 全局未知页关闭动作，所有任务共享。
     DEFAULT_UNKNOWN_CLOSERS = [
@@ -711,6 +712,12 @@ class GameUi(ChessBattleNavigationMixin, BaseTask, GameUiAssets):
         """
 
         self.maybe_screenshot(skip_first_screenshot)
+
+        # 客户端掉回登录态（掉线/被顶号）时页面上的标志全部不可信，点关闭动作
+        # 没有意义，交回 Restart 处理（登录流程会关掉弹窗）
+        if self.device.app_lost_login():
+            raise GameNotRunningError('Client dropped back to login')
+
         logger.warning("Try switch to a supported page")
         for action in [*self.navigator.local_unknown_closers, *self.DEFAULT_UNKNOWN_CLOSERS]:
             action_name = self._action_name(action)
@@ -732,7 +739,7 @@ class GameUi(ChessBattleNavigationMixin, BaseTask, GameUiAssets):
 
         @run_once
         def minicap_check():
-            if self.config.script.device.control_method == "uiautomator2":
+            if not self.device.is_desktop and self.config.script.device.control_method == "uiautomator2":
                 self.device.uninstall_minicap()
 
         @run_once
@@ -856,6 +863,10 @@ class GameUi(ChessBattleNavigationMixin, BaseTask, GameUiAssets):
             advanced = True
             for transition in path:
                 if not self._execute_transition(transition):
+                    if self.ABORT_ON_TRANSITION_FAILURE:
+                        message = f"Navigation failed at {transition.key}; target page[{destination.key}]"
+                        logger.error(message)
+                        raise GamePageUnknownError(message)
                     advanced = False
                     if repeated_failure_transition_key == transition.key:
                         repeated_failure_count += 1

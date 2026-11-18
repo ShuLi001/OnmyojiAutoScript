@@ -1,5 +1,41 @@
 [
   {
+    "itemName": "md_daily_ticket_queue",
+    "roiFront": "847,514,52,24",
+    "roiBack": "847,514,52,24",
+    "mode": "DigitCounter",
+    "method": "Default",
+    "keyword": "",
+    "description": "全部队列底部超鬼王当日门票获取进度"
+  },
+  {
+    "itemName": "md_daily_ticket_reward",
+    "roiFront": "1138,6,100,36",
+    "roiBack": "1138,6,100,36",
+    "mode": "DigitCounter",
+    "method": "Default",
+    "keyword": "",
+    "description": "战斗奖励页超鬼王当日门票获取进度"
+  },
+  {
+    "itemName": "md_daily_ticket_exploration",
+    "roiFront": "936,14,100,36",
+    "roiBack": "936,14,100,36",
+    "mode": "DigitCounter",
+    "method": "Default",
+    "keyword": "",
+    "description": "探索页超鬼王当日门票获取进度"
+  },
+  {
+    "itemName": "md_realm_raid_tickets",
+    "roiFront": "548,12,84,36",
+    "roiBack": "548,12,84,36",
+    "mode": "DigitCounter",
+    "method": "Default",
+    "keyword": "",
+    "description": "活动期间探索地图顶部的结界挑战券库存"
+  },
+  {
     "itemName": "md_fatigue",
     "roiFront": "1109,22,114,34",
     "roiBack": "1106,17,124,41",

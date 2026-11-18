@@ -183,9 +183,8 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
         logger.info('All wanted quests are traced')
 
         self.screenshot()
-        # 新版卡片页仍保留协作任务的邀请入口；第一张卡的邀请按钮
-        # 作为协作任务存在的判断，后续沿用原有 VIP/随机邀请逻辑。
-        if any(self.appear(btn) for btn in (self.I_WQ_INVITE_1, self.I_WQ_INVITE_2, self.I_WQ_INVITE_3)):
+        # 三张卡片的红色或紫色邀请入口，沿用原有 VIP/随机邀请逻辑。
+        if any(self.get_invite_button(index) for index in range(1, 4)):
             if self.need_invite_vip():
                 self.all_cooperation_invite()
             else:
@@ -230,7 +229,7 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
                 self.ui_click_until_disappear(self.I_UI_BACK_RED)
                 return False
 
-        if not (self.appear(self.I_WQ_INVITE_1) or self.appear(self.I_WQ_INVITE_2) or self.appear(self.I_WQ_INVITE_3)):
+        if not any(self.get_invite_button(index) for index in range(1, 4)):
             logger.info("there is no cooperation quest")
             return False
 
@@ -473,6 +472,13 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
                         self.device.click_record_clear()
         logger.info('Secret mission finished')
 
+    def get_invite_button(self, index: int) -> Optional[RuleImage]:
+        for suffix in ('', '_PURPLE'):
+            btn = getattr(self, f'I_WQ_INVITE_{index}{suffix}')
+            if self.appear(btn):
+                return btn
+        return None
+
     def invite_random(self, add_button: RuleImage):
         self.screenshot()
         if not self.appear(add_button):
@@ -504,9 +510,10 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
         """
 
         logger.hr('Invite friends')
-        self.invite_random(self.I_WQ_INVITE_1)
-        self.invite_random(self.I_WQ_INVITE_2)
-        self.invite_random(self.I_WQ_INVITE_3)
+        for index in range(1, 4):
+            btn = self.get_invite_button(index)
+            if btn is not None:
+                self.invite_random(btn)
 
     def all_cooperation_invite(self, name_all: str = None):
         """
@@ -516,8 +523,7 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
 
         """
         self.screenshot()
-        invite_buttons = (self.I_WQ_INVITE_1, self.I_WQ_INVITE_2, self.I_WQ_INVITE_3)
-        if not any(self.appear(btn) for btn in invite_buttons):
+        if not any(self.get_invite_button(index) for index in range(1, 4)):
             return False
 
         ret = self.get_cooperation_info()
@@ -616,8 +622,8 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
         self.screenshot()
         retList = []
         for index in range(3):
-            btn = self.__getattribute__("I_WQ_INVITE_" + str(index + 1))
-            if not self.appear(btn):
+            btn = self.get_invite_button(index + 1)
+            if btn is None:
                 continue
             if self.appear(self.__getattribute__("I_WQ_COOPERATION_TYPE_JADE_" + str(index + 1))):
                 retList.append({'type': CooperationType.Jade, 'inviteBtn': btn})

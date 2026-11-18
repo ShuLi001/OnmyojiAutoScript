@@ -14,8 +14,10 @@ from module.base.timer import Timer
 from module.config.utils import get_server_next_update
 from module.device.app_control import AppControl
 from module.device.control import Control
+from module.device.desktop_device import DesktopDevice
 from module.device.platform2 import Platform
 from module.device.screenshot import Screenshot
+from module.atom.image import DESKTOP_ROI_MATCH_PAD, set_roi_match_padding
 from module.exception import (GameNotRunningError,
                               GameStuckError,
                               GameTooManyClickError,
@@ -24,7 +26,7 @@ from module.exception import (GameNotRunningError,
 from module.logger import logger
 
 
-class Device(Platform, Screenshot, Control, AppControl):
+class Device(DesktopDevice, Platform, Screenshot, Control, AppControl):
     _screen_size_checked = False
     detect_record = set()
     click_record = deque(maxlen=15)
@@ -51,13 +53,17 @@ class Device(Platform, Screenshot, Control, AppControl):
                     )
                     raise RequestHumanTakeover
 
+        self.reset_image_batch_cache()
+        set_roi_match_padding(DESKTOP_ROI_MATCH_PAD if self.is_desktop else 0)
+        if self.is_desktop:
+            self._init_desktop()
+            return
+
         # Auto-fill emulator info
         if IS_WINDOWS and self.config.script.device.emulatorinfo_type == 'auto':
             _ = self.emulator_instance
 
         self.screenshot_interval_set()
-        self._image_batch_cache_frame_id: str | None = None
-        self._image_batch_cache: dict[int, dict] = {}
 
         # Auto-select the fastest screenshot method
         if self.config.script.device.screenshot_method == 'auto':
@@ -132,10 +138,18 @@ class Device(Platform, Screenshot, Control, AppControl):
         """
         self.stuck_record_check()
 
+        # 桌面模式：窗口缺失说明客户端当前不可用（启动期未出窗口，或客户端崩了）。
+        # 直接截图会抛 (1400, '无效的窗口句柄') 搞崩整个进程，必须先拦下；拉客户端
+        # 是 Restart 的职责。最小化不算窗口缺失——BitBlt 截图前会先还原窗口。
+        if self.is_desktop and not self.desktop_window_exists():
+            raise GameNotRunningError('Desktop client window not found')
+
         try:
             super().screenshot()
-        except RequestHumanTakeover as e:
-            raise RequestHumanTakeover
+        except Exception as error:
+            if self.is_desktop and getattr(error, 'winerror', None) == 1400:
+                raise GameNotRunningError('Desktop client window closed during capture') from error
+            raise
 
         if self.handle_night_commission():
             super().screenshot()
@@ -144,6 +158,8 @@ class Device(Platform, Screenshot, Control, AppControl):
         return self.image
 
     def release_during_wait(self):
+        if self.is_desktop:
+            return
         # Scrcpy server is still sending video stream,
         # stop it during wait
         # self.config.script.device.screenshot_method = 'scrcpy'
@@ -256,6 +272,17 @@ class Device(Platform, Screenshot, Control, AppControl):
         self.stuck_record_check = empty_function
 
     def app_start(self):
+        # 桌面模式：窗口缺失时自动启动客户端并绑定 PID（空闲关闭后由 Restart 重新拉起）
+        if self.is_desktop:
+            if not self._desktop_ensure_launched():
+                logger.error('Desktop client not running and auto-launch failed, '
+                             'please start the game manually or check game_path')
+                raise GameNotRunningError('Desktop client auto-launch failed')
+            # 这里必然早于 app_handle_login，且是拉起客户端的唯一入口：客户区没校准到
+            # 1280x720 的话登录 OCR 与点击坐标全错。运行期重拉时 Device 对象是复用的，
+            # _init_desktop 不会再跑，所以校准不能只挂在初始化路径上
+            self.desktop_window_set_size()
+            return
         if not self.config.script.error.handle_error:
             logger.critical('No app stop/start, because HandleError disabled')
             logger.critical('Please enable Alas.Error.HandleError or manually login to AzurLane')
@@ -265,6 +292,12 @@ class Device(Platform, Screenshot, Control, AppControl):
         self.click_record_clear()
 
     def app_stop(self):
+        # 桌面模式：关闭客户端。desktop_stop_client 内部已做「窗口消失 且 进程退出」
+        # 验证并多轮重杀，关不掉时它已记 ERROR，这里只把结论透出
+        if self.is_desktop:
+            if not self.desktop_stop_client():
+                logger.warning('Desktop client not released, residual process may remain')
+            return
         if not self.config.script.error.handle_error:
             logger.critical('No app stop/start, because HandleError disabled')
             logger.critical('Please enable Alas.Error.HandleError or manually login to AzurLane')
@@ -283,6 +316,9 @@ class Device(Platform, Screenshot, Control, AppControl):
             timeout: 最大等待秒数。
             interval: 每轮探测的间隔秒数。
         """
+        if self.is_desktop:
+            # 桌面 app_start 已等待游戏窗口，登录由 LoginService 判断。
+            return
         deadline = time.time() + timeout
         screenshot_method = self.screenshot_methods.get(
             self.config.script.device.screenshot_method,

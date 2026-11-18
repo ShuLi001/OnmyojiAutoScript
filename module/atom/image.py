@@ -14,6 +14,15 @@ from module.base.utils import is_approx_rectangle
 from module.base.utils.utils import random_normal_distribution_int
 
 
+DESKTOP_ROI_MATCH_PAD = 2
+_roi_match_padding = 0
+
+
+def set_roi_match_padding(pad: int) -> None:
+    global _roi_match_padding
+    _roi_match_padding = max(0, int(pad))
+
+
 class RuleImage:
     debug_mode: bool = False
     METHOD_TEMPLATE_MATCH = "Template matching"
@@ -151,9 +160,19 @@ class RuleImage:
             return True
         return False
 
+    def _match_roi(self) -> tuple[int, int, int, int]:
+        """桌面画面的搜索框多留几像素，保留原始坐标用于点击与颜色判断。"""
+        x, y, w, h = map(int, self.roi_back)
+        pad = _roi_match_padding
+        if not pad:
+            return x, y, w, h
+        left, top = max(0, x - pad), max(0, y - pad)
+        return left, top, x + w + pad - left, y + h + pad - top
+
     def _update_roi_front(self, loc: tuple[int, int], size: tuple[int, int]) -> None:
-        self.roi_front[0] = loc[0] + self.roi_back[0]
-        self.roi_front[1] = loc[1] + self.roi_back[1]
+        x, y, _, _ = self._match_roi()
+        self.roi_front[0] = loc[0] + x
+        self.roi_front[1] = loc[1] + y
         self.roi_front[2] = size[0]
         self.roi_front[3] = size[1]
 
@@ -170,7 +189,7 @@ class RuleImage:
             "method": self.method,
             "threshold": float(self.threshold),
             "roi_front": list(self.roi_front),
-            "roi_back": list(self.roi_back),
+            "roi_back": list(self._match_roi()),
             "scale_range": scale_range,
             "scale_step": float(self.scale_step),
         }
@@ -186,7 +205,7 @@ class RuleImage:
     def template_match(self, image: np.array, threshold: float = None) -> bool:
         if threshold is None:
             threshold = self.threshold
-        source = self.corp(image)
+        source = self.corp(image, self._match_roi())
         mat = self.image
 
         if self._template_image_invalid(mat):
@@ -221,7 +240,7 @@ class RuleImage:
     def multi_scale_template_match(self, image: np.array, threshold: float = None) -> bool:
         if threshold is None:
             threshold = self.threshold
-        source = self.corp(image)
+        source = self.corp(image, self._match_roi())
         mat = self.image
 
         if self._template_image_invalid(mat):
@@ -284,7 +303,6 @@ class RuleImage:
             image=image,
             frame_id=frame_id,
             threshold=threshold,
-            roi=self.roi_back,
         )
         return [tuple(item) for item in result.get("matches", [])]
 
@@ -304,7 +322,6 @@ class RuleImage:
             image=image,
             frame_id=frame_id,
             threshold=threshold,
-            roi=self.roi_back,
             nms_threshold=nms_threshold,
         )
         return [tuple(item) for item in result.get("matches", [])]
@@ -349,7 +366,7 @@ class RuleImage:
         :param show: 测试用的
         :return:
         """
-        source = self.corp(image)
+        source = self.corp(image, self._match_roi())
         kp, des = self.sift.detectAndCompute(source, None)
         # 参数1：index_params
         #    对于SIFT和SURF，可以传入参数index_params=dict(algorithm=FLANN_INDEX_KDTREE, trees=5)。
@@ -383,8 +400,9 @@ class RuleImage:
                 result = False
             else:
                 dst = int32(cv2.perspectiveTransform(pts, m))
-                self.roi_front[0] = dst[0, 0, 0] + self.roi_back[0]
-                self.roi_front[1] = dst[0, 0, 1] + self.roi_back[1]
+                x0, y0, _, _ = self._match_roi()
+                self.roi_front[0] = dst[0, 0, 0] + x0
+                self.roi_front[1] = dst[0, 0, 1] + y0
                 if show:
                     cv2.polylines(source, [dst], isClosed=True, color=(0, 0, 255), thickness=2)
                 if not is_approx_rectangle(np.array([pos[0] for pos in dst])):

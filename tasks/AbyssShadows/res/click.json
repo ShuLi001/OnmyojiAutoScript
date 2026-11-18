@@ -106,5 +106,17 @@
     "roiFront": "380,15,45,30",
     "roiBack": "380,15,45,30",
     "description": "红标主怪点击区域"
+  },
+  {
+    "itemName": "abyss_loadout_open",
+    "roiFront": "894,627,53,42",
+    "roiBack": "894,627,53,42",
+    "description": "点击挑战详情底部的队伍预设"
+  },
+  {
+    "itemName": "abyss_loadout_dismiss",
+    "roiFront": "779,615,60,35",
+    "roiBack": "779,615,60,35",
+    "description": "点击队伍预设面板下方的空白背景"
   }
 ]

@@ -5,20 +5,22 @@ import random
 from time import sleep
 from datetime import time, datetime, timedelta
 
-from tasks.Component.GeneralBattle.general_battle import BattleAction, GeneralBattle
+from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
+from tasks.Component.GeneralBattle.general_battle import BattleAction, BattleContext, GeneralBattle
 from tasks.Component.GeneralInvite.general_invite import GeneralInvite
 from tasks.Component.GeneralBuff.general_buff import GeneralBuff
 from tasks.Component.GeneralRoom.general_room import GeneralRoom
-from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
+from tasks.Component.QuickLoadout.dungeon import DungeonQuickLoadout
 from tasks.GameUi.game_ui import GameUi
-from tasks.GameUi.page import any_of, page_main, page_reward, page_shikigami_records, page_soul_zones
+from tasks.GameUi.page import any_of, page_main, page_reward, page_soul_zones
 from tasks.FallenSun.assets import FallenSunAssets
 from tasks.FallenSun.config import FallenSun, UserStatus
 from module.logger import logger
 from module.exception import TaskEnd
 
 
-class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi, SwitchSoul, FallenSunAssets):
+class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi, DungeonQuickLoadout, FallenSunAssets):
+    LOADOUT_TASK_NAME = '日轮之陨'
 
     def _fallen_sun_battle_key(self) -> str:
         return f"fallen_sun_{self.config.fallen_sun.fallen_sun_config.layer}"
@@ -27,28 +29,40 @@ class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi,
         reward_page = self.navigator.resolve_page(page_reward)
         if reward_page is None:
             return
-        reward_page.recognizer = any_of(self.I_GREED_GHOST, self.I_REWARD, self.I_REWARD_GOLD)
+        reward_page.recognizer = any_of(self.INVITE_AGAIN_POPUP, self.I_GREED_GHOST, self.I_REWARD, self.I_REWARD_GOLD)
+
+    def _apply_prepare_preset(self, config: GeneralBattleConfig) -> None:
+        self._apply_first_dungeon_battle_preset()
+
+    def _handle_reward(self, context: BattleContext, config: GeneralBattleConfig) -> BattleAction:
+        if self.config.fallen_sun.fallen_sun_config.user_status == UserStatus.LEADER and \
+                self.check_and_invite(self.config.fallen_sun.invite_config.default_invite):
+            return BattleAction.CONTINUE
+        return super()._handle_reward(context, config)
 
     def run(self) -> bool:
-        # 御魂切换方式一
-        if self.config.fallen_sun.switch_soul.enable:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul(self.config.fallen_sun.switch_soul.switch_group_team)
-
-        # 御魂切换方式二
-        if self.config.fallen_sun.switch_soul.enable_switch_by_name:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul_by_name(self.config.fallen_sun.switch_soul.group_name,
-                                         self.config.fallen_sun.switch_soul.team_name)
-
         limit_count = self.config.fallen_sun.fallen_sun_config.limit_count
         limit_time = self.config.fallen_sun.fallen_sun_config.limit_time
         self.current_count = 0
         self.limit_count: int = limit_count
         self.limit_time: timedelta = timedelta(hours=limit_time.hour, minutes=limit_time.minute, seconds=limit_time.second)
 
-        self.goto_page(page_main)
         config: FallenSun = self.config.fallen_sun
+        role = config.fallen_sun_config.user_status
+        self._first_battle_lineup = None
+        if role in (UserStatus.LEADER, UserStatus.MEMBER, UserStatus.ALONE):
+            member = role == UserStatus.MEMBER
+            if not member:
+                self.goto_page(page_soul_zones)
+                self.fallen_sun_enter()
+                self.check_layer(config.fallen_sun_config.layer)
+            if not self.apply_dungeon_loadout(config.general_battle_config.get_lineup, lambda: None,
+                                              member=member, team_battle=role in (UserStatus.LEADER, UserStatus.MEMBER)):
+                self.set_next_run('FallenSun', finish=False, success=False)
+                self.goto_page(page_main)
+                raise TaskEnd
+            if member:
+                self.goto_page(page_main)
 
         success = True
         match config.fallen_sun_config.user_status:
@@ -109,10 +123,6 @@ class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi,
 
     def run_leader(self):
         logger.info('Start run leader')
-        self.goto_page(page_soul_zones)
-        self.fallen_sun_enter()
-        layer = self.config.fallen_sun.fallen_sun_config.layer
-        self.check_layer(layer)
         self.check_lock(self.config.fallen_sun.general_battle_config.lock_team_enable)
         # 创建队伍
         logger.info('Create team')
@@ -267,10 +277,6 @@ class ScriptTask(GeneralBattle, GeneralInvite, GeneralBuff, GeneralRoom, GameUi,
 
     def run_alone(self):
         logger.info('Start run alone')
-        self.goto_page(page_soul_zones)
-        self.fallen_sun_enter()
-        layer = self.config.fallen_sun.fallen_sun_config.layer
-        self.check_layer(layer)
         self.check_lock(self.config.fallen_sun.general_battle_config.lock_team_enable)
 
         def is_in_fallen_sun(screenshot=False) -> bool:

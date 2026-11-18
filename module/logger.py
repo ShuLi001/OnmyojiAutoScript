@@ -99,6 +99,13 @@ console_formatter = logging.Formatter(
 flutter_formatter = logging.Formatter(
     fmt='| %(asctime)s.%(msecs)03d | %(message)08s', datefmt='%H:%M:%S')
 
+_CLICK_LOG_RE = re.compile(r"^(?:\[\d+(?:\.\d+)?s\]\s+)?Click \(\s*-?\d+,\s*-?\d+\s*\) @ ")
+
+
+def is_click_log_message(message: str) -> bool:
+    """识别实际点击记录，重复坐标也表示另一次操作。"""
+    return _CLICK_LOG_RE.match(message) is not None
+
 
 # ======================================================================================================================
 #            Set console logger
@@ -168,7 +175,7 @@ class RichFileHandler(RichHandler):
         """
         self._rotate_if_needed()
         content = self._record_content(record)
-        if self._is_duplicate_content(content):
+        if self._is_duplicate_content(content) and not is_click_log_message(record.getMessage()):
             return
         super().emit(record)
         self._last_saved_content = content

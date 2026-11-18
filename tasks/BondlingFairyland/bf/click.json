@@ -46,5 +46,29 @@
     "roiFront": "628,314,108,137",
     "roiBack": "0,0,100,100",
     "description": "平安京地域"
+  },
+  {
+    "itemName": "bf_loadout_open",
+    "roiFront": "940,559,47,40",
+    "roiBack": "940,559,47,40",
+    "description": "探查底部队伍预设"
+  },
+  {
+    "itemName": "bf_loadout_dismiss",
+    "roiFront": "557,111,32,27",
+    "roiBack": "557,111,32,27",
+    "description": "探查预设面板左上方空白"
+  },
+  {
+    "itemName": "ball_loadout_open",
+    "roiFront": "767,559,47,40",
+    "roiBack": "767,559,47,40",
+    "description": "结契底部队伍预设"
+  },
+  {
+    "itemName": "ball_loadout_dismiss",
+    "roiFront": "365,481,28,25",
+    "roiBack": "365,481,28,25",
+    "description": "结契预设面板左侧空白"
   }
 ]

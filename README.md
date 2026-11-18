@@ -46,6 +46,17 @@
 - **装饰可选**: 全部初始皮肤是什么鬼，这里支持你喜欢的庭院、主题等等，[详细说明](https://github.com/runhey/OnmyojiAutoScript/issues/180)
 - **百鬼夜行**: 利用AI来智能撒豆子，模型包含所有式神，[效果展示](https://runhey.github.io/OnmyojiAutoScript-website/docs/user-manual/hyakkiyakou)
 
+### 使用《阴阳师》桌面版
+
+在 Windows 上启动 OAS 后端，在 OASX 中选择要运行的配置，打开 **设置 → 桌面版设置**。
+启用桌面模式并保存，重新启动脚本。游戏安装目录默认自动查找，也可以手动填写。
+可以直接启动脚本，或点击 **启动客户端实例** 预先打开游戏。首次登录、扫码或账号验证请在游戏窗口内完成。
+由 OAS 新启动的游戏实例使用 Windows 的「高 DPI 缩放替代 → 应用程序」模式。已经打开的游戏需要退出后重新启动。
+
+多开时为每个配置填写不同的档案目录。游戏窗口可以被其他窗口覆盖，最小化后 OAS 会尝试恢复窗口。
+如果游戏以管理员权限运行，OAS 后端也应使用相同权限。关闭桌面模式后，脚本会继续使用原来的模拟器设置。
+需要独立 Android 应用的功能（如大神签到）仍需模拟器。
+
 ## 许可证 LICENSE
 
 This project is licensed under the GNU General Public License v3.0.

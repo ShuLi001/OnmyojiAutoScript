@@ -19,15 +19,23 @@ class GoryouRealmAssets:
 	C_GR_C_3 = RuleClick(roi_front=(725,97,195,401), roi_back=(725,97,195,401), name="gr_c_3")
 	# description 
 	C_GR_C_4 = RuleClick(roi_front=(1026,82,206,334), roi_back=(1026,82,206,334), name="gr_c_4")
+	# 御灵详情左侧暗神龙
+	C_GR_TAB_1 = RuleClick(roi_front=(33,120,28,80), roi_back=(33,120,28,80), name="gr_tab_1")
+	# 御灵详情左侧暗白蔵主
+	C_GR_TAB_2 = RuleClick(roi_front=(33,276,28,80), roi_back=(33,276,28,80), name="gr_tab_2")
+	# 御灵详情左侧暗黑豹
+	C_GR_TAB_3 = RuleClick(roi_front=(33,432,28,80), roi_back=(33,432,28,80), name="gr_tab_3")
+	# 御灵详情左侧暗孔雀
+	C_GR_TAB_4 = RuleClick(roi_front=(33,588,28,80), roi_back=(33,588,28,80), name="gr_tab_4")
 
 
 	# Image Rule Assets
 	# 点击挑战 
 	I_GR_FIRE = RuleImage(roi_front=(1057,584,88,89), roi_back=(1012,557,183,148), threshold=0.8, method="Template matching", file="./tasks/GoryouRealm/gr/gr_gr_fire.png")
 	# description 
-	I_GR_LOCK = RuleImage(roi_front=(701,657,27,32), roi_back=(665,629,99,91), threshold=0.5, method="Template matching", file="./tasks/GoryouRealm/gr/gr_gr_lock.png")
+	I_GR_LOCK = RuleImage(roi_front=(699,652,32,35), roi_back=(689,643,52,52), threshold=0.8, method="Template matching", file="./tasks/GoryouRealm/gr/gr_gr_lock.png")
 	# description 
-	I_GR_UNLOCK = RuleImage(roi_front=(705,656,20,30), roi_back=(671,636,84,73), threshold=0.8, method="Template matching", file="./tasks/GoryouRealm/gr/gr_gr_unlock.png")
+	I_GR_UNLOCK = RuleImage(roi_front=(699,652,32,35), roi_back=(689,643,52,52), threshold=0.8, method="Template matching", file="./tasks/GoryouRealm/gr/gr_gr_unlock.png")
 
 
 	# Ocr Rule Assets

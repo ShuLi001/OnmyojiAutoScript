@@ -1,19 +1,25 @@
 # This Python file uses the following encoding: utf-8
 # @author runhey
 # github https://github.com/runhey
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
 from tasks.Component.config_scheduler import Scheduler
-from tasks.Component.config_base import ConfigBase
-from tasks.Component.SwitchSoul.switch_soul_config import SwitchSoulConfig
+from tasks.Component.QuickLoadout.dungeon_config import DungeonBattleConfig, DungeonLoadoutTaskConfig
 from tasks.AreaBoss.config_boss import Boss
 
 
-class AreaBoss(ConfigBase):
+class AreaBossBattleConfig(DungeonBattleConfig):
+    lock_team_enable: bool = Field(default=False, description='lock_team_enable_help')
+    enable_dungeon_loadout: bool = Field(default=False, description='enable_area_boss_loadout_help')
+
+
+class AreaBoss(DungeonLoadoutTaskConfig):
+    BATTLE_GROUP = 'general_battle'
+    LEGACY_DUNGEON_GROUP = 'boss'
+    LEGACY_SOUL_GROUP = 'switch_soul'
+
     scheduler: Scheduler = Field(default_factory=Scheduler)
     boss: Boss = Field(default_factory=Boss)
-    general_battle: GeneralBattleConfig = Field(default_factory=GeneralBattleConfig)
-    switch_soul: SwitchSoulConfig = Field(default_factory=SwitchSoulConfig)
+    general_battle: AreaBossBattleConfig = Field(default_factory=AreaBossBattleConfig)
 
 

@@ -12,6 +12,7 @@ from module.atom.click import RuleClick
 from module.base.timer import Timer
 from module.atom.image_grid import ImageGrid
 from module.atom.image import RuleImage
+from module.config.realm_status import RealmCard, observe_realm_timer, realm_resource_card, record_realm_timer
 from module.base.utils import point2str
 from module.logger import logger
 from module.exception import TaskEnd, GameStuckError
@@ -94,6 +95,7 @@ class ScriptTask(KU, KekkaiActivationAssets):
         # 太诡异了 为什么有这么长的动画, 那么长的动画先休息一会
         logger.hr('Start activation')
         time.sleep(0.5)
+        selected_card = None
         while 1:
             self.screenshot()
             card_status = self.check_card_status()
@@ -109,10 +111,12 @@ class ScriptTask(KU, KekkaiActivationAssets):
                     logger.info('Now in the animation')
                     logger.info('Now there is no card')
                     continue
+            if not card_effect:
+                record_realm_timer(self.config, "card", None, empty=True)
             # 如果这张卡生效着，在使用中
             if card_status and card_effect:
                 logger.info('Card is using')
-                interval = self.ocr_time()
+                interval = self.ocr_time(card=selected_card)
                 self.set_next_run("KekkaiActivation", target=interval+datetime.now())
                 return False
             # 如果已经选中这张卡了， 那就激活这张卡
@@ -127,13 +131,13 @@ class ScriptTask(KU, KekkaiActivationAssets):
                         continue
                     if self.appear_then_click(self.I_A_ACTIVATE_YELLOW, interval=1):
                         continue
-                interval = self.ocr_time(True)
+                interval = self.ocr_time(True, card=selected_card)
                 self.set_next_run("KekkaiActivation", target=interval + datetime.now())
                 return True
             # 如果是什么都没有，那就是可以开始挂卡了
             if not card_status and not card_effect:
                 logger.info('Card is not selected also not using')
-                self.screening_card(_config.card_type)
+                selected_card = self.screening_card(_config.card_type)
 
     def check_card_status(self, screenshot=False) -> bool:
         """
@@ -167,20 +171,17 @@ class ScriptTask(KU, KekkaiActivationAssets):
             elif self.appear(self.I_A_ACTIVATE_GRAY):
                 return False
 
-    def ocr_time(self, screenshot=False) -> timedelta or None:
+    def ocr_time(self, screenshot=False, *, card: RealmCard | None = None) -> timedelta:
         if screenshot:
             self.screenshot()
-        delta = self.O_CARD_ALL_TIME.ocr_duration(self.device.image)
-        if not isinstance(delta, timedelta):
-            logger.warning('OCR error')
-            return None
+        delta = observe_realm_timer(self.config, "card", self.O_CARD_ALL_TIME, self.device.image, card=card)
         if delta == timedelta(0):
             logger.error('The remaining time detected for this card is 0')
             logger.error('This may be due to the fact that the card has not yet been collected')
             raise GameStuckError
         return delta
 
-    def screening_card(self, rule: str):
+    def screening_card(self, rule: str) -> RealmCard | None:
         """
         开始挑选卡
         :return:
@@ -219,11 +220,12 @@ class ScriptTask(KU, KekkaiActivationAssets):
         # 找最优卡
         while 1:
             self.screenshot()
-            target = self.check_card_num()
-            if target is None:
+            selection = self.check_card_num()
+            if selection is None:
                 # 未发现卡，处理逻辑
                 self._card_not_found()
-            if self.appear(self.I_A_EMPTY):
+            elif self.appear(self.I_A_EMPTY):
+                target, card = selection
                 while 1:
                     self.screenshot()
                     if not self.appear(self.I_A_EMPTY):
@@ -231,11 +233,11 @@ class ScriptTask(KU, KekkaiActivationAssets):
                         self.config.save()
                         message = f'✅ 确认挂卡: {rule}'
                         self.save_image(content=message, push_flag=False, wait_time=0)
-                        return
+                        return card
                     if self.click(target, interval=1):
                         continue
 
-    def check_card_num(self):
+    def check_card_num(self) -> tuple[RuleClick, RealmCard | None] | None:
         rule = self.config.kekkai_activation.activation_config.card_type
         if rule == CardType.TAIKO:
             min_card_num = self.config.kekkai_activation.activation_config.min_taiko_num
@@ -256,7 +258,7 @@ class ScriptTask(KU, KekkaiActivationAssets):
             filtered_results = [result for result in results if check_card in result.ocr_text]
             logger.info(f"识别到卡: {[result.ocr_text for result in filtered_results]}")
 
-            # 第二步：提取数字并按数字排序
+            # 第二步：提取达到收益门槛的数字
             numeric_results = []
             for result in filtered_results:
                 # 使用正则表达式提取所有数字
@@ -264,12 +266,10 @@ class ScriptTask(KU, KekkaiActivationAssets):
                 if numbers:  # 如果提取到数字
                     if numbers[0] < min_card_num:
                         continue
-                    numeric_results.append((numbers[0], result))  # 按第一个数字排序
+                    numeric_results.append((numbers[0], result))
 
             if numeric_results:
-                # 按数字大到小排序
-                sorted_results = [result for _, result in sorted(numeric_results, key=lambda x: x[0], reverse=True)]
-                max_result = sorted_results[0]  # 获取数字最大的结果对象
+                value, max_result = max(numeric_results, key=lambda x: x[0])
 
                 box = max_result.box  # 获取边界框坐标
                 x_min = self.O_CHECK_CARD_NUMBER.roi[0] + box[0][0]
@@ -281,7 +281,7 @@ class ScriptTask(KU, KekkaiActivationAssets):
                 target = RuleClick(roi_front=roi, roi_back=roi, name="tmpclick")
                 logger.info(f"选择挂卡: [{max_result.ocr_text}] {roi}")
 
-                return target
+                return target, realm_resource_card(rule, value)
             else:
                 if ocr_count > 3:
                     logger.error('多次未找到符合条件的结果, 退出')

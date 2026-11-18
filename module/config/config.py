@@ -20,6 +20,7 @@ from module.config.config_model import ConfigModel
 from module.config.config_state import ConfigState
 from module.config.scheduler import TaskScheduler
 from module.config.utils import *
+from module.config.weekly_schedule import next_weekly_run, resolve_weekly_run
 from module.notify.notify import Notifier
 
 from module.exception import RequestHumanTakeover, ScriptError
@@ -189,7 +190,11 @@ class Config(ConfigState, ConfigManual, ConfigWatcher, ConfigMenu):
                 continue
             if not isinstance(func.next_run, datetime):
                 error.append(func)
-            elif func.next_run < self.scheduler_update_dt:
+                continue
+            run_times = getattr(getattr(self.model, key, None), 'weekly_run_times', ())
+            if run_times:
+                func.next_run = resolve_weekly_run(run_times, func.next_run, self.scheduler_update_dt)
+            if func.next_run < self.scheduler_update_dt:
                 pending_task.append(func)
             else:
                 waiting_task.append(func)
@@ -316,6 +321,41 @@ class Config(ConfigState, ConfigManual, ConfigWatcher, ConfigMenu):
             logger.warning(f'No scheduler in {task}')
             return
 
+        run_times = getattr(task_object, 'weekly_run_times', ())
+        if run_times:
+            now = datetime.now()
+            if target is None:
+                retry_delay = scheduler.failure_interval if success is False else None
+                next_run = next_weekly_run(run_times, now, retry_delay=retry_delay)
+            else:
+                next_run = self._calculate_next_run(scheduler, server=False, target=target)
+                next_run = resolve_weekly_run(run_times, next_run, now)
+            next_run = next_run.replace(microsecond=0)
+        else:
+            next_run = self._calculate_next_run(scheduler, start_time, success, server, target)
+
+        # 保证线程安全的
+        self.lock_config.acquire()
+        try:
+            scheduler.next_run = next_run
+            self.save()
+        finally:
+            self.lock_config.release()
+        logger.attr(f'{task}.scheduler.next_run', next_run)
+
+    def preview_task_next_run(self, task: str) -> datetime | None:
+        """Calculate the quick-wait time without saving or broadcasting a schedule."""
+        task_object = getattr(self.model, convert_to_underscore(task), None)
+        scheduler = getattr(task_object, 'scheduler', None)
+        if scheduler is None:
+            return None
+        run_times = getattr(task_object, 'weekly_run_times', ())
+        if run_times:
+            return next_weekly_run(run_times, datetime.now())
+        return self._calculate_next_run(scheduler, success=True)
+
+    @staticmethod
+    def _calculate_next_run(scheduler, start_time=None, success=None, server=True, target=None) -> datetime:
         # 任务开始时间
         if not start_time:
             start_time = datetime.now().replace(microsecond=0)
@@ -340,15 +380,13 @@ class Config(ConfigState, ConfigManual, ConfigWatcher, ConfigMenu):
             target = nearest_future(target)
             run.append(target)
 
-        next_run = None
         # 排序
         if not len(run):
             raise ScriptError(
                 "Missing argument in delay_next_run, should set at least one"
             )
 
-        run = min(run).replace(microsecond=0)
-        next_run = run
+        next_run = min(run).replace(microsecond=0)
 
         if server and hasattr(scheduler, 'server_update'):
             # 加入随机延迟时间
@@ -362,26 +400,7 @@ class Config(ConfigState, ConfigManual, ConfigWatcher, ConfigMenu):
             else:
                 next_run = parse_tomorrow_server(scheduler.server_update, scheduler.delay_date, random_float)
 
-        # 将这些连接起来，方便日志输出
-        kv = dict_to_kv(
-            {
-                "success": success,
-                "server_update": server,
-                "target": target,
-            },
-            allow_none=False,
-        )
-        # logger.info(f"Delay task `{task}` to {next_run} ({kv})")
-
-        # 保证线程安全的
-        self.lock_config.acquire()
-        try:
-            scheduler.next_run = next_run
-            self.save()
-        finally:
-            self.lock_config.release()
-        # 设置
-        logger.attr(f'{task}.scheduler.next_run', next_run)
+        return next_run
 
 
 if __name__ == '__main__':

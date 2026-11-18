@@ -25,5 +25,14 @@
     "method": "Template matching",
     "threshold": 0.9,
     "description": "今日已挑战"
+  },
+  {
+    "itemName": "nw_loadout_entry",
+    "imageName": "netherworld_nw_loadout_entry.png",
+    "roiFront": "151,596,36,36",
+    "roiBack": "132,579,75,68",
+    "method": "Template matching",
+    "threshold": 0.9,
+    "description": "阴界之门详情左下方的队伍预设图标"
   }
 ]

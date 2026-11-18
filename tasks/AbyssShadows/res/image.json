@@ -304,5 +304,23 @@
     "method": "Template matching",
     "threshold": 0.8,
     "description": "极难度"
+  },
+  {
+    "itemName": "abyss_loadout_entry",
+    "imageName": "res_abyss_loadout_entry.png",
+    "roiFront": "894,630,50,39",
+    "roiBack": "890,626,58,47",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "狭间挑战详情的队伍预设图标"
+  },
+  {
+    "itemName": "abyss_loadout_panel_border",
+    "imageName": "res_abyss_loadout_panel_border.png",
+    "roiFront": "1047,571,55,26",
+    "roiBack": "1039,563,71,42",
+    "method": "Template matching",
+    "threshold": 0.9,
+    "description": "狭间暗域队伍预设面板右下边框"
   }
 ]

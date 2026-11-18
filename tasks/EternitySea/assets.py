@@ -18,9 +18,9 @@ class EternitySeaAssets:
 	# 挑战 
 	I_ETERNITY_SEA_FIRE = RuleImage(roi_front=(1142,596,93,48), roi_back=(1102,556,171,164), threshold=0.8, method="Template matching", file="./tasks/EternitySea/res/res_eternity_sea_fire.png")
 	# 开锁 
-	I_ETERNITYSEA_UNLOCK = RuleImage(roi_front=(705,659,20,26), roi_back=(645,630,195,90), threshold=0.8, method="Template matching", file="./tasks/EternitySea/res/res_eternitysea_unlock.png")
+	I_ETERNITYSEA_UNLOCK = RuleImage(roi_front=(699,652,32,35), roi_back=(689,643,52,52), threshold=0.8, method="Template matching", file="./tasks/EternitySea/res/res_eternitysea_unlock.png")
 	# 关锁 
-	I_NEWETERNITYSEA_LOCK = RuleImage(roi_front=(702,658,24,28), roi_back=(655,636,182,84), threshold=0.6, method="Template matching", file="./tasks/EternitySea/res/res_neweternitysea_lock.png")
+	I_NEWETERNITYSEA_LOCK = RuleImage(roi_front=(699,652,32,35), roi_back=(689,643,52,52), threshold=0.8, method="Template matching", file="./tasks/EternitySea/res/res_neweternitysea_lock.png")
 
 
 	# List Rule Assets

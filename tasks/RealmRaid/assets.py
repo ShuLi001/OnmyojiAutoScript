@@ -10,7 +10,20 @@ from module.atom.list import RuleList
 class RealmRaidAssets: 
 
 
+	# Click Rule Assets
+	# 点击个人突破和寮突破右侧的队伍预设
+	C_RAID_LOADOUT_OPEN = RuleClick(roi_front=(1208,535,42,40), roi_back=(1208,535,42,40), name="raid_loadout_open")
+	# 点击预设窗口外的标题栏空白处关闭
+	C_RAID_LOADOUT_DISMISS = RuleClick(roi_front=(352,83,57,22), roi_back=(352,83,57,22), name="raid_loadout_dismiss")
+
+
 	# Image Rule Assets
+	# 个人突破和寮突破队伍预设面板右下边框
+	I_RAID_LOADOUT_PANEL_BORDER = RuleImage(roi_front=(1146,539,39,20), roi_back=(1138,531,55,36), threshold=0.9, method="Template matching", file="./tasks/RealmRaid/res/res_raid_loadout_panel_border.png")
+	# 突破页右侧的队伍预设图标
+	I_RAID_LOADOUT_ENTRY = RuleImage(roi_front=(1206,533,44,45), roi_back=(1189,512,85,80), threshold=0.85, method="Template matching", file="./tasks/RealmRaid/res/res_raid_loadout_entry.png")
+	# 突破队伍预设人数不足时替代出战按钮的提示
+	I_RAID_LOADOUT_INCOMPLETE = RuleImage(roi_front=(799,521,318,20), roi_back=(759,490,396,81), threshold=0.85, method="Template matching", file="./tasks/RealmRaid/res/res_raid_loadout_incomplete.png")
 	# 点击结界突破的图片 
 	I_REALM_RAID = RuleImage(roi_front=(246,628,63,64), roi_back=(246,628,63,64), threshold=0.8, method="Template matching", file="./tasks/RealmRaid/res/res_realm_raid.png")
 	# 五个勋章 

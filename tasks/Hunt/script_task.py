@@ -9,15 +9,14 @@ from module.exception import TaskEnd
 from module.logger import logger
 
 from tasks.GameUi.game_ui import GameUi
-from tasks.GameUi.page import page_main, page_hunt, page_hunt_kirin, page_shikigami_records
+from tasks.GameUi.page import page_main, page_hunt, page_hunt_kirin
 from tasks.Component.GeneralBattle.general_battle import GeneralBattle
 from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleConfig
 from tasks.Component.GeneralInvite.general_invite import GeneralInvite
-from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
-from tasks.Hunt.assets import HuntAssets
+from tasks.Hunt.quick_loadout import KirinQuickLoadout, NetherworldQuickLoadout
 
 
-class ScriptTask(GameUi, GeneralBattle, GeneralInvite, SwitchSoul, HuntAssets):
+class ScriptTask(GameUi, GeneralBattle, GeneralInvite, NetherworldQuickLoadout):
     kirin_day = True  # 不是麒麟就是阴界之门
     tomorrow_kirin_day = True  # 明天是麒麟还是阴界之门
 
@@ -26,16 +25,6 @@ class ScriptTask(GameUi, GeneralBattle, GeneralInvite, SwitchSoul, HuntAssets):
         if not self.check_datetime():
             # 设置下次运行时间 为今天的晚上七点钟
             raise TaskEnd('Hunt')
-        con = self.config.hunt.hunt_config
-        if con.kirin_group_team != '-1,-1' or con.netherworld_group_team != '-1,-1':
-            self.goto_page(page_shikigami_records)
-
-            if self.kirin_day:
-                if con.kirin_group_team != '-1,-1':
-                    self.run_switch_soul(con.kirin_group_team)
-            else:
-                if con.netherworld_group_team != '-1,-1':
-                    self.run_switch_soul(con.netherworld_group_team)
         if self.kirin_day:
             self.goto_page(page_hunt_kirin)
             self.kirin()
@@ -101,28 +90,38 @@ class ScriptTask(GameUi, GeneralBattle, GeneralInvite, SwitchSoul, HuntAssets):
 
     def kirin(self):
         logger.hr('kirin', 2)
+        battle = self.config.hunt.kirin_battle_config
+        preset_applied = False
         while 1:
             self.screenshot()
             if self.appear(self.I_PREPARE_HIGHLIGHT):
                 break
             if self.appear_then_click(self.I_UI_CONFIRM, interval=0.9):
                 continue
-            if self.appear_then_click(self.I_KIRIN_CHALLAGE, interval=1.5):
-                continue
             if self.appear(self.I_KIRIN_END):
                 # 今日已挑战
                 logger.warning('Today have already challenged the Kirin')
                 self.ui_click_until_disappear(self.I_UI_BACK_YELLOW)
                 return
+            if not preset_applied and self.appear(self.I_KIRIN_CHALLAGE):
+                if not KirinQuickLoadout(self).apply_dungeon_loadout(battle.get_lineup, lambda: None, member=False):
+                    self.set_next_run(task='Hunt', success=False)
+                    raise TaskEnd('Hunt')
+                preset_applied = True
+                continue
+            if self.appear_then_click(self.I_KIRIN_CHALLAGE, interval=1.5):
+                continue
         logger.info('Start battle')
         self.run_general_battle(
-            self.config.hunt.kirin_battle_config,
+            battle,
             battle_key="hunt_kirin",
             exit_matcher=page_hunt_kirin,
         )
 
     def netherworld(self):
         logger.hr('netherworld', 2)
+        battle = self.config.hunt.netherworld_battle_config
+        preset_applied = False
         while 1:
             self.screenshot()
             if self.is_in_room(False):
@@ -136,6 +135,12 @@ class ScriptTask(GameUi, GeneralBattle, GeneralInvite, SwitchSoul, HuntAssets):
                 continue
             if self.appear_then_click(self.I_UI_CONFIRM, interval=0.9):
                 continue
+            if not preset_applied and self.appear(self.I_NW_CHALLAGE):
+                if not self.apply_dungeon_loadout(battle.get_lineup, lambda: None, member=False):
+                    self.set_next_run(task='Hunt', success=False)
+                    raise TaskEnd('Hunt')
+                preset_applied = True
+                continue
             if self.appear_then_click(self.I_NW_CHALLAGE, interval=1.5):
                 continue
             if self.appear(self.I_NW_DONE):
@@ -145,7 +150,7 @@ class ScriptTask(GameUi, GeneralBattle, GeneralInvite, SwitchSoul, HuntAssets):
                 return
         logger.info('Start battle')
         self.run_general_battle(
-            self.config.hunt.netherworld_battle_config,
+            battle,
             battle_key="hunt_netherworld",
             exit_matcher=page_hunt,
         )

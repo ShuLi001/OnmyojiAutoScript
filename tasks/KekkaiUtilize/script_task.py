@@ -8,8 +8,9 @@ from datetime import timedelta, datetime
 
 from module.base.timer import Timer
 from module.atom.image_grid import ImageGrid
+from module.config.realm_status import RealmCard, observe_realm_timer, realm_resource_card, record_realm_timer
 from module.logger import logger
-from module.exception import TaskEnd, GamePageUnknownError, GameStuckError
+from module.exception import TaskEnd, GamePageUnknownError, GameStuckError, ScriptError
 
 from tasks.GameUi.game_ui import GameUi
 from tasks.KekkaiUtilize.page import page_guild_realm, page_guild_realm_utilize, page_guild_realm_growth, \
@@ -36,6 +37,7 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
     utilize_current_group_has_eligible_card = False
     utilize_current_group_scan_completed = False
     utilize_lazy_mode_active = False
+    _selected_foster_card: RealmCard | None = None
     ap_max_num = 0
     jade_max_num = 0
     utilize_threshold_filtered = False
@@ -90,7 +92,7 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
                 return
 
         # 查看育成满级
-        self.check_max_lv(con.shikigami_class, con.auto_fill)
+        self.check_max_lv(con.shikigami_class, con.auto_fill, observe_foster=not con.utilize_enable)
         # 检查是否有蹭卡收获 是否收取
         if con.utilize_harvest:
             self.check_utilize_harvest()
@@ -113,6 +115,7 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
 
     def check_utilize_add(self):
         con = self.config.kekkai_utilize.utilize_config
+        card = None
         while 1:
             self.utilize_add_count += 1
             if self.utilize_add_count >= 5:
@@ -138,10 +141,8 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
             # 进入育成界面
             self.goto_page(page_guild_realm_growth)
             self.screenshot()
-            if not self.appear(self.I_UTILIZE_ADD):
-                remaining_time = self.O_UTILIZE_RES_TIME.ocr(self.device.image)
-                if not isinstance(remaining_time, timedelta):
-                    logger.warning('Ocr remaining time error')
+            remaining_time = self._read_foster_remaining(card)
+            if remaining_time is not None:
                 logger.info(f'Utilize remaining time: {remaining_time}')
                 # 已经蹭上卡了，设置下次蹭卡时间  # 减少30秒
                 # remaining_time = remaining_time - timedelta(seconds=30)
@@ -154,7 +155,8 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
             if not self.goto_page(page_guild_realm_utilize):
                 logger.info('Utilize failed, exit')
             # 开始执行寄养
-            self.run_utilize(con.select_friend_list, con.shikigami_class, con.shikigami_order)
+            success = self.run_utilize(con.select_friend_list, con.shikigami_class, con.shikigami_order)
+            card = self._selected_foster_card if success else None
             # 无论寄养成功还是失败，都先退出好友结界；终止失败时不能把
             # 任务留在目标结界内部。
             # 好友的育成页同样含 I_RS_RECORDS_SHIKI, 会被误判成自家育成页导致
@@ -169,13 +171,25 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
             if self.utilize_terminal_failure:
                 return False
 
-    def check_max_lv(self, shikigami_class: ShikigamiClass = ShikigamiClass.N, auto_fill: bool = False):
+    def _read_foster_remaining(self, card: RealmCard | None = None) -> timedelta | None:
+        if self.appear(self.I_UTILIZE_ADD):
+            record_realm_timer(self.config, "foster", None, empty=True)
+            return None
+        return observe_realm_timer(self.config, "foster", self.O_UTILIZE_RES_TIME, self.device.image, card=card)
+
+    def check_max_lv(
+        self, shikigami_class: ShikigamiClass = ShikigamiClass.N, auto_fill: bool = False,
+        *, observe_foster: bool = False,
+    ):
         """
         在结界界面，进入式神育成，检查是否有满级的，如果有就换下一个
         退出的时候还是结界界面
         :return:
         """
         self.goto_page(page_guild_realm_growth)
+        if observe_foster:
+            self.screenshot()
+            self._read_foster_remaining()
         if auto_fill:
             # 旧代码用无超时 ui_click: 若实际停在好友育成页(无自动育成/一键移除按钮)
             # 会无点击空转直到 60s GameStuckError, 加硬超时兜底
@@ -591,6 +605,7 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
         :return:
         """
         logger.hr('Start utilize')
+        self._selected_foster_card = None
         fallback_friend = (
             SelectFriendList.DIFFERENT_SERVER
             if friend == SelectFriendList.SAME_SERVER
@@ -644,6 +659,13 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
             # 可能是滑动的时候出错
             logger.warning('The best reason is that the swipe is wrong')
             return self._record_utilize_failure('未识别到进入结界按钮')
+        if self.utilize_lazy_mode_active:
+            try:
+                self._selected_foster_card = realm_resource_card(
+                    *self.check_card_num(refresh=False, notify_invalid=False)
+                )
+            except ScriptError as error:
+                logger.warning(f'无法读取寄养卡信息: {error}')
         try:
             self.goto_page(page_friend_utilize)
         except (GamePageUnknownError, GameStuckError) as error:
@@ -924,6 +946,7 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
             # 在同一次选卡流程内按 OCR 数值重新定位，避免拿记录值冒充选择状态。
             self._reset_utilize_friend_list(friend)
             if self._locate_recorded_resource_card(card_type, card_value):
+                self._selected_foster_card = realm_resource_card(card_type, card_value)
                 logger.info(f'✅ 已重新选中最优结界卡: {card_type}@{card_value}')
                 return True
             logger.warning(f'❌ 无法重新定位最优结界卡: {card_type}@{card_value}')
@@ -1148,6 +1171,7 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
                     setattr(self, record_attr, card_value)
 
                 if self._is_strategy_maximum_reward(card_type, card_value):
+                    self._selected_foster_card = realm_resource_card(card_type, card_value)
                     logger.info(
                         f'✅ 当前策略最高收益已确认: '
                         f'{card_type}@{card_value}，保留当前选项并停止浏览'
@@ -1182,9 +1206,10 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
         self.device.click_record_clear()
         time.sleep(2)
 
-    def check_card_num(self) -> tuple[str, int]:
+    def check_card_num(self, *, refresh=True, notify_invalid=True) -> tuple[str, int]:
         """优化版数值提取方法，返回结界卡类型及对应数值"""
-        self.screenshot()
+        if refresh:
+            self.screenshot()
         # OCR识别
         raw_text = self.O_CARD_NUM.ocr(self.device.image)
         # logger.info(f'OCR原始结果: {raw_text}')
@@ -1210,7 +1235,8 @@ class ScriptTask(GameUi, ReplaceShikigami, KekkaiUtilizeAssets):
             value = 0
 
         if value <= 0:
-            self.push_notify(content=f'数值异常: {raw_text} -> 解析值: {value}')
+            if notify_invalid:
+                self.push_notify(content=f'数值异常: {raw_text} -> 解析值: {value}')
             return card_type, 0
 
         # logger.info(f'识别成功: 卡类型: {card_type}, 数值: {value}')

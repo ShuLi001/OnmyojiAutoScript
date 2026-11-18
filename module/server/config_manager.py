@@ -10,8 +10,13 @@ from typing import Any, get_args, get_origin
 from pydantic import BaseModel, ValidationError
 
 from module.config.config_model import ConfigModel
+from module.config.realm_status import update_realm_timer_profile
 from module.config.utils import convert_to_underscore, read_file, write_file
 from module.logger import logger
+from tasks.Component.QuickLoadout.dungeon_config import DungeonLoadoutTaskConfig
+from tasks.DemonRetreat.config import DemonRetreat
+from tasks.Hunt.config import Hunt
+from tasks.RealmRaid.loadout_config import RaidLoadoutTaskConfig
 
 
 CONFIG_NAME_RESERVED_CHARS = set('/\\:*?"<>|')
@@ -29,6 +34,9 @@ CONFIG_REDACTION_PATHS = (
     "script.device.handle",
     "script.device.emulatorinfo_name",
     "script.device.emulatorinfo_path",
+    "script.desktop.game_path",
+    "script.desktop.profile_dir",
+    "script.desktop.window_title",
     "find_jade.sup_account_list_*.account",
     "find_jade.sup_account_list_*.account_alias",
 )
@@ -151,6 +159,8 @@ class ConfigManager:
     def _collect_unknown_field_errors(data: Any, model_type: type[BaseModel], prefix: str = '') -> list[dict[str, str]]:
         if not isinstance(data, dict):
             return []
+        if issubclass(model_type, (DemonRetreat, Hunt, RaidLoadoutTaskConfig, DungeonLoadoutTaskConfig)):
+            data = model_type.migrate_loadout_config(data)
 
         errors = []
         fields = model_type.model_fields
@@ -566,6 +576,7 @@ class ConfigManager:
             return False
         try:
             old_path.rename(new_path)
+            update_realm_timer_profile(old_name, new_name)
             logger.info(f'rename {old_path} to {new_path}')
             return True
         except Exception as e:
@@ -586,6 +597,7 @@ class ConfigManager:
             return False
         try:
             file_path.unlink()
+            update_realm_timer_profile(file)
             logger.info(f'delete {file_path}')
             return True
         except Exception as e:

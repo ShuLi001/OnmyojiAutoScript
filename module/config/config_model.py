@@ -13,6 +13,7 @@ from pathlib import Path
 from pydantic import BaseModel, ValidationError, Field
 
 from module.config.utils import *
+from module.config.weekly_schedule import resolve_weekly_run
 from module.logger import logger
 
 # 导入配置的Python文件
@@ -22,6 +23,7 @@ from tasks.RyouToppa.config import RyouToppa
 from tasks.Dokan.config import Dokan
 from tasks.Script.config import Script
 from tasks.Restart.config import Restart
+from tasks.AssetSnapshot.config import AssetSnapshot
 from tasks.GlobalGame.config import GlobalGame
 # 每日任务-----------------------------------------------------------------------------------------------------
 from tasks.AreaBoss.config import AreaBoss
@@ -91,6 +93,7 @@ class ConfigModel(ConfigBase):
     script: Script = Field(default_factory=Script)
     restart: Restart = Field(default_factory=Restart)
     global_game: GlobalGame = Field(default_factory=GlobalGame)
+    asset_snapshot: AssetSnapshot = Field(default_factory=AssetSnapshot)
 
     # 这些是每日任务的
     area_boss: AreaBoss = Field(default_factory=AreaBoss)
@@ -419,8 +422,24 @@ class ConfigModel(ConfigBase):
             logger.info(f"reset_task_datetime={date_time}")
             self.reset_datetime_for_all_enabled_tasks(date_time)
 
+        # 一次性动作：启动结果返回前端，无需把按钮值写进配置。
+        if (task == 'script' and group == 'desktop' and argument == 'launch_instance'
+                and value is True):
+            from module.device.env import IS_WINDOWS
+            if not IS_WINDOWS:
+                logger.error('桌面客户端只能由 Windows 上的 OAS 启动')
+                return False
+            from module.device.method.desktop_impl import desktop_launch_instance
+            return desktop_launch_instance(self)
+
         # 设置参数
         try:
+            if group == 'scheduler' and argument == 'next_run' and isinstance(value, datetime):
+                run_times = getattr(task_object, 'weekly_run_times', ())
+                if run_times:
+                    now = datetime.now()
+                    # 首页立即运行传入过去的时间，按服务端当天的开放日处理。
+                    value = resolve_weekly_run(run_times, max(value, now.replace(microsecond=0)), now)
             setattr(group_object, argument, value)
             logger.info(f'Set arg {self.config_name}.{task}.{group}.{argument}.{value}')
             self.save()  # 我是没有想到什么方法可以使得属性改变自动保存的

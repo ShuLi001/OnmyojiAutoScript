@@ -9,33 +9,31 @@ from module.logger import logger
 from module.exception import TaskEnd
 
 from tasks.Component.GeneralBattle.general_battle import GeneralBattle
-from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
+from tasks.Component.QuickLoadout.dungeon import DungeonQuickLoadout
 from tasks.GameUi.default_pages import page_battle_prepare, page_battle
 from tasks.GameUi.game_ui import GameUi
-from tasks.GameUi.page import page_main, page_shikigami_records, page_goryou_realm, page_exploration
+from tasks.GameUi.page import page_goryou_realm, page_exploration
 from tasks.GoryouRealm.config import GoryouClass
 from tasks.GoryouRealm.assets import GoryouRealmAssets
 
 
-class ScriptTask(GeneralBattle, GameUi, SwitchSoul, GoryouRealmAssets):
+class ScriptTask(GeneralBattle, GameUi, DungeonQuickLoadout, GoryouRealmAssets):
+    LOADOUT_TASK_NAME = '御灵之境'
+
+    def _activity_loadout_entry_visible(self) -> bool:
+        return self.appear(self.I_CHECK_GORYOU) and self.appear(self.I_GR_FIRE) and self.appear(self.LOADOUT_ENTRY)
 
     def run(self):
         con = self.config.goryou_realm
         limit_time = con.goryou_config.limit_time
         self.limit_time: timedelta = timedelta(hours=limit_time.hour, minutes=limit_time.minute,
                                                seconds=limit_time.second)
-        if con.switch_soul_config.enable:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul(con.switch_soul_config.switch_group_team)
-        if con.switch_soul_config.enable_switch_by_name:
-            self.goto_page(page_shikigami_records)
-            self.run_switch_soul_by_name(con.switch_soul_config.group_name, con.switch_soul_config.team_name)
         self.goto_page(page_goryou_realm)
         match_click = {
-            GoryouClass.Dark_Divine_Dragon: self.C_GR_C_1,
-            GoryouClass.Dark_Hakuzousu: self.C_GR_C_2,
-            GoryouClass.Dark_Black_Panther: self.C_GR_C_3,
-            GoryouClass.Dark_Peacock: self.C_GR_C_4,
+            GoryouClass.Dark_Divine_Dragon: (self.C_GR_C_1, self.C_GR_TAB_1),
+            GoryouClass.Dark_Hakuzousu: (self.C_GR_C_2, self.C_GR_TAB_2),
+            GoryouClass.Dark_Black_Panther: (self.C_GR_C_3, self.C_GR_TAB_3),
+            GoryouClass.Dark_Peacock: (self.C_GR_C_4, self.C_GR_TAB_4),
         }
         goryou_class = con.goryou_config.goryou_class
         if goryou_class == GoryouClass.RANDOM:
@@ -45,13 +43,25 @@ class ScriptTask(GeneralBattle, GameUi, SwitchSoul, GoryouRealmAssets):
                 3: GoryouClass.Dark_Black_Panther,
                 4: GoryouClass.Dark_Peacock,
             }[randint(1, 4)]
-        while 1:
-            self.screenshot()
-            if self.appear(self.I_GR_FIRE):
-                logger.info('Enter GoryouRealm')
-                break
-            if self.click(match_click[goryou_class], interval=1):
-                continue
+        overview, tab = match_click[goryou_class]
+        ready = True
+        self.screenshot()
+        if self.appear(self.I_GR_FIRE):
+            # 已经在御灵详情页时，从左侧切到本轮选择的御灵。
+            if self._activity_loadout_panel_visible():
+                ready = self._dismiss_activity_loadout()
+            if ready:
+                self.click(tab)
+                sleep(0.5)
+        else:
+            while not self.appear(self.I_GR_FIRE):
+                self.click(overview, interval=1)
+                self.screenshot()
+        logger.info('Enter GoryouRealm')
+        if not ready or not self.apply_dungeon_loadout(con.general_battle_config.get_lineup, lambda: None, member=False):
+            self.goto_page(page_exploration)
+            self.set_next_run(task='GoryouRealm', success=False, finish=False)
+            raise TaskEnd
         self.check_lock(con.general_battle_config.lock_team_enable, self.I_GR_LOCK, self.I_GR_UNLOCK)
         # 开始循环
         while True:

@@ -3,10 +3,12 @@
 # github https://github.com/runhey
 import os
 import json
+import hashlib
 import yaml
 
 from filelock import FileLock
 from datetime import datetime, timedelta, timezone, time
+from pathlib import Path
 
 from module.config.atomicwrites import atomic_write
 from module.logger import logger
@@ -272,6 +274,22 @@ def parse_tomorrow_server(server_update: time, delay_date: int = 1, float_second
             next_run = end_of_tomorrow
     
     return next_run
+
+def desktop_mode_enabled(config) -> bool:
+    """是否启用桌面客户端模式（script.desktop.enable）。"""
+    return bool(getattr(getattr(config.script, 'desktop', None), 'enable', False))
+
+
+def configured_device_id(config) -> str:
+    """同一设备共用调度与资产采集锁；独立桌面档案可并行。"""
+    if not desktop_mode_enabled(config):
+        return str(config.script.device.serial)
+    profile = config.script.desktop.profile_dir.strip()
+    if not profile:
+        return 'desktop:default'
+    path = Path(os.path.expandvars(profile)).expanduser().resolve()
+    return 'desktop:profile:' + hashlib.sha256(os.fsencode(os.path.normcase(path))).hexdigest()
+
 
 def deep_get(d, keys, default=None):
     """
