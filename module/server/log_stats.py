@@ -55,15 +55,6 @@ class TaskRunState:
 
 
 @dataclass
-class RuntimeState:
-    saw_start_boundary: bool = False
-    pre_start_first: datetime | None = None
-    region_last: datetime | None = None
-    session_start: datetime | None = None
-    total_duration: float = 0.0
-
-
-@dataclass
 class HistoricalStatsCacheEntry:
     expires_at: datetime
     payload: dict[str, Any]
@@ -72,7 +63,6 @@ class HistoricalStatsCacheEntry:
 class LogStatsParser:
     def __init__(self) -> None:
         self.summary: dict[str, dict[str, Any]] = {}
-        self.runtime = RuntimeState()
         self._saw_scheduler_marker = False
         self._scheduled_task: str | None = None
         self._pending_task_name: str | None = None
@@ -121,7 +111,7 @@ class LogStatsParser:
         tasks = parser._build_tasks_payload()
         return {
             "script_name": script_name,
-            "total_runtime_seconds": parser._current_total_runtime(),
+            "total_runtime_seconds": round(sum(task["total_duration_seconds"] for task in tasks.values()), 3),
             "total_task_run_count": sum(task["run_count"] for task in tasks.values()),
             "total_battle_count": sum(
                 0 if task["battle"] is None else int(task["battle"]["count"])
@@ -199,14 +189,12 @@ class LogStatsParser:
             # The banner after Scheduler: Start task is only decorative.
             if title.upper() == _START_TITLE:
                 self._discard_scheduled_task()
-                self._handle_start_boundary()
             return
 
         self._close_active_battle()
         self._close_active_task()
         self._reset_six_realms_state()
         if title.upper() == _START_TITLE:
-            self._handle_start_boundary()
             self._pending_task_start_name = None
             return
         if self._is_six_realms_title(title):
@@ -284,24 +272,6 @@ class LogStatsParser:
         self._six_realms_start_time = None
         self._six_realms_last_time = None
 
-    def _handle_start_boundary(self) -> None:
-        runtime = self.runtime
-        if not runtime.saw_start_boundary:
-            runtime.saw_start_boundary = True
-            runtime.total_duration = self._append_duration(
-                runtime.total_duration,
-                runtime.pre_start_first,
-                runtime.region_last,
-            )
-        else:
-            runtime.total_duration = self._append_duration(
-                runtime.total_duration,
-                runtime.session_start,
-                runtime.region_last,
-            )
-        runtime.session_start = None
-        runtime.region_last = None
-
     def _handle_battle_boundary(self) -> None:
         self._close_active_battle()
         if self._active_task is not None:
@@ -317,7 +287,6 @@ class LogStatsParser:
         if ts is None:
             return
 
-        self._consume_runtime_timestamp(ts)
         message = line.rsplit("|", 1)[-1].strip()
         scheduler_task = _SCHEDULER_TASK_RE.fullmatch(message)
         if scheduler_task:
@@ -346,16 +315,6 @@ class LogStatsParser:
                 self._handle_task_ended(task_ended_title)
         elif self._active_battle is not None and message.lower() in _BATTLE_END_MESSAGES:
             self._close_active_battle()
-
-    def _consume_runtime_timestamp(self, ts: datetime) -> None:
-        runtime = self.runtime
-        runtime.region_last = ts
-        if not runtime.saw_start_boundary:
-            if runtime.pre_start_first is None:
-                runtime.pre_start_first = ts
-            return
-        if runtime.session_start is None:
-            runtime.session_start = ts
 
     def _consume_six_realms_timestamp(self, ts: datetime) -> None:
         if not self._six_realms_active:
@@ -449,14 +408,6 @@ class LogStatsParser:
             }
         return cleaned_tasks
 
-    def _current_total_runtime(self) -> float:
-        runtime = self.runtime
-        if runtime.saw_start_boundary:
-            total_duration = self._append_duration(runtime.total_duration, runtime.session_start, runtime.region_last)
-        else:
-            total_duration = self._append_duration(0.0, runtime.pre_start_first, runtime.region_last)
-        return round(total_duration, 3)
-
     @staticmethod
     def _build_battle_payload(count: int, total_duration_seconds: float) -> dict[str, Any] | None:
         if count <= 0:
@@ -465,12 +416,6 @@ class LogStatsParser:
             "count": int(count),
             "avg_duration_seconds": round(total_duration_seconds / count, 3),
         }
-
-    @staticmethod
-    def _append_duration(total_duration: float, start_time: datetime | None, end_time: datetime | None) -> float:
-        if start_time is None or end_time is None or end_time < start_time:
-            return total_duration
-        return round(total_duration + (end_time - start_time).total_seconds(), 3)
 
 
 @dataclass
