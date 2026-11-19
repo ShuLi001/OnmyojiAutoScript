@@ -302,6 +302,7 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
         monster_name = target_match.group(1).strip() if target_match else ''
         if monster_name in self.unwanted_boss_name_list:
             logger.warning(f'unwanted {monster_name}')
+            self._skip_current_wq_progress(f'unwanted {monster_name}')
             self.appear_then_click(self.I_DETAIL_CLOSE_NEW, interval=1)
             return False
         # 获取排序后的悬赏信息列表

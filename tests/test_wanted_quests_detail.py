@@ -1,5 +1,8 @@
 import unittest
 from types import SimpleNamespace
+from unittest.mock import Mock
+
+import numpy as np
 
 from tasks.WantedQuests.script_task import ScriptTask, is_wq_detail_title
 
@@ -60,3 +63,27 @@ class WantedQuestDetailPageTests(unittest.TestCase):
     def test_rejects_list_text_without_detail_controls(self):
         task = make_task("悬赏封印 0/5")
         self.assertFalse(task.is_new_wq_detail())
+
+    def test_unwanted_quest_is_skipped_on_next_list_scan(self):
+        goto = object()
+        task = make_task("悬赏目标：击败1个青蛙瓷器", visible_rules=(goto,))
+        task.I_GOTO_NEW_1 = goto
+        task.unwanted_boss_name_list = ["青蛙瓷器"]
+        task.appear_then_click = Mock()
+        task.I_MYSTERY_QUESTION = Mock()
+        task.I_MYSTERY_QUESTION.match.return_value = False
+        task.O_WQ_TEXT_ALL = Mock(roi=(0, 0, 100, 720))
+
+        def progress(text, y):
+            box = np.array([[42, y], [71, y], [71, y + 15], [42, y + 15]])
+            return SimpleNamespace(ocr_text=text, box=box)
+
+        task.O_WQ_TEXT_ALL.detect_and_ocr.return_value = [progress("071", 435)]
+        current, _, total, task.O_WQ_TEXT_ALL.area = task.find_wq(task.device.image)
+        self.assertFalse(task.execute_mission(total - current))
+        task.appear_then_click.assert_called_once_with(task.I_DETAIL_CLOSE_NEW, interval=1)
+
+        for text in ("0/1", "071"):
+            with self.subTest(text=text):
+                task.O_WQ_TEXT_ALL.detect_and_ocr.return_value = [progress(text, 434), progress("0/1", 535)]
+                self.assertEqual(task.find_wq(task.device.image), (0, 1, 1, [42, 535, 29, 15]))
