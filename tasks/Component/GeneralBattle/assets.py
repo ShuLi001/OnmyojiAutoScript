@@ -130,9 +130,13 @@ class GeneralBattleAssets:
 	# 确认按钮 
 	I_CONFIRM = RuleImage(roi_front=(732,383,83,43), roi_back=(330,228,615,286), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralBattle/gb/gb_confirm.png")
 	# 关闭御魂不一致提示弹窗 
-	I_CONFIRM_CLOSE_DIFF_SOUL = RuleImage(roi_front=(571,404,135,54), roi_back=(517,374,226,112), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralBattle/gb/gb_confirm_close_diff_soul.png")
-	# 禁用御魂不一致提示7天 
-	I_DISABLE_7DAYS_DIFF_SOUL = RuleImage(roi_front=(547,342,27,36), roi_back=(524,325,70,71), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralBattle/gb/gb_disable_7days_diff_soul.png")
+	I_CONFIRM_CLOSE_DIFF_SOUL = RuleImage(roi_front=(552,407,177,65), roi_back=(500,375,280,120), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralBattle/gb/gb_confirm_close_diff_soul.png")
+	# 御魂不一致弹窗：7日内不再提示，未勾选
+	I_DISABLE_7DAYS_DIFF_SOUL = RuleImage(roi_front=(544,344,35,35), roi_back=(524,325,70,71), threshold=0.8, method="Template matching", file="./tasks/Component/GeneralBattle/gb/gb_disable_7days_diff_soul.png")
+	# 检测到当前式神与队伍预设设置的御魂不一致
+	I_DIFF_SOUL_DIALOG = RuleImage(roi_front=(435,273,410,61), roi_back=(400,250,480,110), threshold=0.85, method="Template matching", file="./tasks/Component/GeneralBattle/gb/gb_diff_soul_dialog.png")
+	# 御魂不一致弹窗：7日内不再提示，已勾选（复用默认邀请圆形勾选图标）
+	I_DIFF_SOUL_CHECKED = RuleImage(roi_front=(544,344,35,35), roi_back=(524,325,70,71), threshold=0.85, method="Template matching", file="./tasks/Component/GeneralBattle/gb/gb_diff_soul_checked.png")
 
 
 	# Ocr Rule Assets

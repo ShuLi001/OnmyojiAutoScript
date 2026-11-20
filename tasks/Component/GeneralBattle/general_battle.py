@@ -604,6 +604,39 @@ class GeneralBattle(GeneralBuff, GeneralBattleAssets):
     def _apply_prepare_preset(self, config: GeneralBattleConfig) -> None:
         self.switch_preset_team(config.preset_enable, config.preset_group, config.preset_team)
 
+    def _handle_soul_mismatch_dialog(self) -> bool:
+        """确认勾选七日内不再提示后关闭御魂不一致弹窗。"""
+        if not self.appear(self.I_DIFF_SOUL_DIALOG):
+            return False
+
+        logger.info('检测到御魂不一致弹窗，先勾选7日内不再提示')
+        timeout = Timer(10).start()
+        checked_frames = 0
+        closed_frames = 0
+        while not timeout.reached():
+            self.screenshot()
+            if not self.appear(self.I_DIFF_SOUL_DIALOG):
+                checked_frames = 0
+                closed_frames += 1
+                if closed_frames >= 2:
+                    logger.info('御魂不一致弹窗已关闭')
+                    return True
+                continue
+
+            closed_frames = 0
+            if self.appear(self.I_DIFF_SOUL_CHECKED):
+                checked_frames += 1
+                if checked_frames >= 2:
+                    if checked_frames == 2:
+                        logger.info('已确认勾选7日内不再提示，点击确定')
+                    self.appear_then_click(self.I_CONFIRM_CLOSE_DIFF_SOUL, interval=1.5)
+                continue
+
+            checked_frames = 0
+            self.appear_then_click(self.I_DISABLE_7DAYS_DIFF_SOUL, interval=1.5)
+
+        raise GameStuckError('御魂不一致弹窗处理超时，未能确认勾选并关闭弹窗')
+
     def _handle_prepare(self, context: BattleContext, config: GeneralBattleConfig) -> BattleAction:
         """处理准备页逻辑。
 
@@ -621,15 +654,13 @@ class GeneralBattle(GeneralBuff, GeneralBattleAssets):
             if action != BattleAction.CONTINUE:
                 return action
 
-        if self.appear_then_click(self.I_DISABLE_7DAYS_DIFF_SOUL, interval=0.6):
-            return BattleAction.CONTINUE
-        if self.appear_then_click(self.I_CONFIRM_CLOSE_DIFF_SOUL, interval=0.6):
-            return BattleAction.CONTINUE
-
-        self._run_battle_behavior_once(
+        if self._run_battle_behavior_once(
             behavior_name="preset",
             action=lambda: self._apply_prepare_preset(config),
-        )
+        ):
+            self.screenshot()
+            if self._handle_soul_mismatch_dialog():
+                return BattleAction.CONTINUE
         self._run_battle_behavior_once(
             behavior_name="buff",
             action=lambda: self.check_and_open_buff(context.buff),
@@ -830,6 +861,8 @@ class GeneralBattle(GeneralBuff, GeneralBattleAssets):
                 self.screenshot()
                 self._tick_long_battle(context)
                 self._tick_timeout(context)
+                if self._handle_soul_mismatch_dialog():
+                    continue
                 page = GameUi.detect_page_in(self, page_battle_prepare, page_battle, page_battle_result,
                                              page_reward, include_global=False)
                 context.reward_no_battle_ts = None if page else context.reward_no_battle_ts

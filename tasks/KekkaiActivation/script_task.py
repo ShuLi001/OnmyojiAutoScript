@@ -37,9 +37,7 @@ class ScriptTask(KU, KekkaiActivationAssets):
 
         if con.exchange_before:
             self.check_max_lv(con.shikigami_class, con.auto_fill)
-        # 收取经验
-        self.harvest_card()
-        # 开始挂卡
+        # 收取经验并开始挂卡
         self.run_activation(con)
         self.goto_page(page_guild_realm)
 
@@ -85,10 +83,23 @@ class ScriptTask(KU, KekkaiActivationAssets):
             raise ValueError('Unknown utilize rule')
 
     def run_activation(self, _config: ActivationConfig) -> bool:
+        """收奖并检查挂卡状态，最多尝试三轮后报错。"""
+        for attempt in range(1, 4):
+            logger.info(f'结界收奖与挂卡检查：第 {attempt}/3 次')
+            self.goto_page(page_guild_realm)
+            if not self.harvest_card():
+                continue
+            result = self._activate_card(_config)
+            if result is not None:
+                return result
+            logger.warning(f'第 {attempt}/3 次检查结界卡剩余时间为 0，需返回结界补收奖励')
+        raise GameStuckError('结界收奖或零剩余时间恢复连续三次失败')
+
+    def _activate_card(self, _config: ActivationConfig) -> bool | None:
         """
         执行挂卡，要求在结界的界面
         顺便把下一次执行也设置了
-        :return: 挂卡成功（）返回True，失败(时间没到提前来了)返回False
+        :return: 挂卡成功返回True，卡仍在生效返回False，剩余时间为0返回None以补收奖励
         退出的时候还是在挂卡界面而不是结界界面
         """
         self.goto_page(page_guild_card)
@@ -117,6 +128,8 @@ class ScriptTask(KU, KekkaiActivationAssets):
             if card_status and card_effect:
                 logger.info('Card is using')
                 interval = self.ocr_time(card=selected_card)
+                if interval == timedelta(0):
+                    return None
                 self.set_next_run("KekkaiActivation", target=interval+datetime.now())
                 return False
             # 如果已经选中这张卡了， 那就激活这张卡
@@ -132,6 +145,8 @@ class ScriptTask(KU, KekkaiActivationAssets):
                     if self.appear_then_click(self.I_A_ACTIVATE_YELLOW, interval=1):
                         continue
                 interval = self.ocr_time(True, card=selected_card)
+                if interval == timedelta(0):
+                    return None
                 self.set_next_run("KekkaiActivation", target=interval + datetime.now())
                 return True
             # 如果是什么都没有，那就是可以开始挂卡了
@@ -174,12 +189,7 @@ class ScriptTask(KU, KekkaiActivationAssets):
     def ocr_time(self, screenshot=False, *, card: RealmCard | None = None) -> timedelta:
         if screenshot:
             self.screenshot()
-        delta = observe_realm_timer(self.config, "card", self.O_CARD_ALL_TIME, self.device.image, card=card)
-        if delta == timedelta(0):
-            logger.error('The remaining time detected for this card is 0')
-            logger.error('This may be due to the fact that the card has not yet been collected')
-            raise GameStuckError
-        return delta
+        return observe_realm_timer(self.config, "card", self.O_CARD_ALL_TIME, self.device.image, card=card)
 
     def screening_card(self, rule: str) -> RealmCard | None:
         """
@@ -330,16 +340,33 @@ class ScriptTask(KU, KekkaiActivationAssets):
         self.set_next_run("KekkaiActivation", target=next_run)
         raise TaskEnd
 
-    def harvest_card(self):
-        """
-        收卡的经验
-        :return:
-        """
-        self.appear_then_click(self.I_A_HARVEST_EXP)  # 如果到最后没有领的话有下面的一些图片
-        self.appear_then_click(self.I_A_HARVEST_FISH4)  # 斗鱼4/5区别不大 斗鱼的如果一直没有领的话
-        self.appear_then_click(self.I_A_HARVEST_KAIKO_4)  # 太鼓4
-        self.appear_then_click(self.I_A_HARVEST_KAIKO_3)  # 太鼓3
-        self.appear_then_click(self.I_A_HARVEST_KAIKO_6)  # 太鼓6
-        self.appear_then_click(self.I_A_HARVEST_FISH_6)  # 斗鱼6
-        self.appear_then_click(self.I_A_HARVEST_MOON_3)  # 太阴3
-        self.appear_then_click(self.I_A_HARVEST_FISH_3)  # 斗鱼三
+    def harvest_card(self) -> bool:
+        """限时收奖，确认结界主页上连续多帧没有奖励图标后返回成功。"""
+        targets = (
+            self.I_A_HARVEST_EXP, self.I_A_HARVEST_FISH4,
+            self.I_A_HARVEST_KAIKO_4, self.I_A_HARVEST_KAIKO_3,
+            self.I_A_HARVEST_KAIKO_6, self.I_A_HARVEST_FISH_6,
+            self.I_A_HARVEST_MOON_3, self.I_A_HARVEST_FISH_3,
+        )
+        timeout = Timer(8).start()
+        confirm = Timer(1.5, count=3).start()
+        while not timeout.reached():
+            self.screenshot()
+            if self.appear(self.I_UI_REWARD):
+                confirm.reset()
+                self.click(self.C_UI_REWARD, interval=1)
+                continue
+            if not self.appear(self.I_REALM_SHIN):
+                confirm.reset()
+                continue
+            for target in targets:
+                if self.appear(target):
+                    confirm.reset()
+                    self.appear_then_click(target, interval=1)
+                    break
+            else:
+                if confirm.reached():
+                    logger.info('结界奖励收取检查完成')
+                    return True
+        logger.warning('结界收奖超时，尚未确认奖励收取完成')
+        return False

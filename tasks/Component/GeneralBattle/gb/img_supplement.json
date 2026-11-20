@@ -20,8 +20,8 @@
   {
     "itemName": "confirm_close_diff_soul",
     "imageName": "gb_confirm_close_diff_soul.png",
-    "roiFront": "571,404,135,54",
-    "roiBack": "517,374,226,112",
+    "roiFront": "552,407,177,65",
+    "roiBack": "500,375,280,120",
     "method": "Template matching",
     "threshold": 0.8,
     "description": "关闭御魂不一致提示弹窗"
@@ -29,10 +29,28 @@
   {
     "itemName": "disable_7days_diff_soul",
     "imageName": "gb_disable_7days_diff_soul.png",
-    "roiFront": "547,342,27,36",
+    "roiFront": "544,344,35,35",
     "roiBack": "524,325,70,71",
     "method": "Template matching",
     "threshold": 0.8,
-    "description": "禁用御魂不一致提示7天"
+    "description": "御魂不一致弹窗：7日内不再提示，未勾选"
+  },
+  {
+    "itemName": "diff_soul_dialog",
+    "imageName": "gb_diff_soul_dialog.png",
+    "roiFront": "435,273,410,61",
+    "roiBack": "400,250,480,110",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "检测到当前式神与队伍预设设置的御魂不一致"
+  },
+  {
+    "itemName": "diff_soul_checked",
+    "imageName": "gb_diff_soul_checked.png",
+    "roiFront": "544,344,35,35",
+    "roiBack": "524,325,70,71",
+    "method": "Template matching",
+    "threshold": 0.85,
+    "description": "御魂不一致弹窗：7日内不再提示，已勾选（复用默认邀请圆形勾选图标）"
   }
 ]
