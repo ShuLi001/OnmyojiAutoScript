@@ -2,15 +2,18 @@
 # @author runhey
 # github https://github.com/runhey
 import time
+import cv2
+import numpy as np
 from cached_property import cached_property
 from datetime import datetime
 
-from module.exception import TaskEnd
+from module.exception import TaskEnd, GameStuckError
+from module.base.timer import Timer
 from module.logger import logger
 from module.atom.ocr import RuleOcr
 
 from tasks.GameUi.game_ui import GameUi
-from tasks.GameUi.page import page_main, page_secret_zones, page_shikigami_records, page_battle_result, any_of
+from tasks.GameUi.page import page_main, page_secret_zones, page_shikigami_records, page_battle_result, page_exploration, any_of
 from tasks.Secret.config import SecretConfig, Secret
 from tasks.Secret.assets import SecretAssets
 from tasks.Component.GeneralBattle.general_battle import ExitMatcher, GeneralBattle
@@ -18,6 +21,18 @@ from tasks.Component.GeneralBattle.config_general_battle import GeneralBattleCon
 from tasks.Component.SwitchSoul.switch_soul import SwitchSoul
 from tasks.Component.GeneralBuff.config_buff import BuffClass
 from tasks.WeeklyTrifles.assets import WeeklyTriflesAssets
+
+
+def has_secret_dialogue_nameplate(image) -> bool:
+    """识别标准秘闻对话框左右任一侧的红色姓名栏。"""
+    if image.shape[:2] != (720, 1280):
+        return False
+    red, green, blue = cv2.split(image[525:580, 280:1020].astype(np.int16))
+    mask = ((red > 90) & (red > green * 1.45) & (red > blue * 1.25)).astype(np.uint8) * 255
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3, 15), dtype=np.uint8))
+    _, _, components, _ = cv2.connectedComponentsWithStats(mask)
+    return any(65 <= w <= 260 and 8 <= h <= 45 and pixels >= 350
+               for _, _, w, h, pixels in components[1:])
 
 
 class ScriptTask(GameUi, GeneralBattle, SwitchSoul, SecretAssets):
@@ -45,6 +60,52 @@ class ScriptTask(GameUi, GeneralBattle, SwitchSoul, SecretAssets):
     def before_run(self):
         battle_result = self.navigator.resolve_page(page_battle_result)
         battle_result.recognizer = any_of(self.I_SE_BATTLE_WIN, battle_result.recognizer)
+
+    def run_secret_battle(self, config=None, buff=None, battle_key="secret", exit_matcher=None) -> bool:
+        """仅在秘闻战斗返回后处理剧情和可选的角色强化展示。"""
+        destination = exit_matcher if exit_matcher is not None else self.I_SE_FIRE
+        success = self.run_general_battle(config, buff=buff, battle_key=battle_key, exit_matcher=destination)
+        self.finish_secret_battle(destination)
+        return success
+
+    def finish_secret_battle(self, destination: ExitMatcher) -> None:
+        """推进已确认的战后对话，直到连续两帧回到挑战或探索页。"""
+        timeout = Timer(30).start()
+        last_state = None
+        stable_frames = 0
+        last_action = None
+        last_text = None
+        while not timeout.reached():
+            self.screenshot()
+            if self.appear(self.I_SE_POST_BATTLE_DIALOGUE) and has_secret_dialogue_nameplate(self.device.image):
+                state = 'dialogue'
+            elif self.appear(self.I_SE_POST_BATTLE_UPGRADE):
+                state = 'upgrade'
+            elif self._evaluate_exit_matcher(destination) or self.match_page_once(page_exploration):
+                state = 'done'
+            else:
+                state = None
+            stable_frames = stable_frames + 1 if state is not None and state == last_state else 1
+            last_state = state
+            if state is None or stable_frames < 2:
+                continue
+            if state == 'done':
+                logger.info('秘闻战后收尾完成，已回到挑战或探索页面')
+                return
+
+            text = None
+            if state == 'dialogue':
+                text = cv2.inRange(self.device.image[610:680, 320:920], (180, 160, 110), (255, 255, 255))
+            # 只有状态或正文确实推进时才清理同一按钮的历史，避免长剧情误触连点保护。
+            if state != last_action or (text is not None and last_text is not None
+                                        and np.count_nonzero(text != last_text) >= 100):
+                self.device.click_record_remove(self.C_SE_POST_BATTLE_ADVANCE.name)
+                last_text = text
+            last_action = state
+            if self.click(self.C_SE_POST_BATTLE_ADVANCE, interval=0.8):
+                logger.info('推进秘闻战后对话' if state == 'dialogue' else '关闭秘闻角色强化展示')
+                stable_frames = 0
+        raise GameStuckError('秘闻战后收尾超时，未回到挑战或探索页面')
 
     def run(self):
         self.before_run()
@@ -104,7 +165,7 @@ class ScriptTask(GameUi, GeneralBattle, SwitchSoul, SecretAssets):
                 if buff is []:
                     buff = None
                 self.click_battle()
-                success = self.run_general_battle(self.battle_config, buff=buff, battle_key="secret")
+                success = self.run_secret_battle(self.battle_config, buff=buff, battle_key="secret")
                 continue
             if not first_battle and layer == 6:
                 # 第六次关闭加成，但是发现没有这个接口。。。！！！居然没有注意到
@@ -116,20 +177,20 @@ class ScriptTask(GameUi, GeneralBattle, SwitchSoul, SecretAssets):
                 if buff is []:
                     buff = None
                 self.click_battle()
-                success = self.run_general_battle(self.battle_config, buff=buff, battle_key="secret")
+                success = self.run_secret_battle(self.battle_config, buff=buff, battle_key="secret")
                 continue
             elif not first_battle and layer == 9 and con.layer_9:
                 self.click_battle()
-                success = self.run_general_battle(self.battle_config, battle_key="secret")
+                success = self.run_secret_battle(self.battle_config, battle_key="secret")
                 continue
             elif not first_battle and layer == 10 and con.layer_10:
                 self.click_battle()
-                success = self.run_general_battle(self.battle_config, battle_key="secret")
+                success = self.run_secret_battle(self.battle_config, battle_key="secret")
                 break
             elif not first_battle:
                 # 其他层
                 self.click_battle()
-                success = self.run_general_battle(self.battle_config, battle_key="secret")
+                success = self.run_secret_battle(self.battle_config, battle_key="secret")
                 continue
 
         self.goto_page(page_main)

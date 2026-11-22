@@ -13,6 +13,8 @@ class SecretAssets:
 	# Click Rule Assets
 	# description 
 	C_SE_CLICK_LAYER = RuleClick(roi_front=(434,155,100,100), roi_back=(434,155,100,100), name="se_click_layer")
+	# 秘闻战后对话正文或角色强化展示的继续点击区域
+	C_SE_POST_BATTLE_ADVANCE = RuleClick(roi_front=(600,620,100,45), roi_back=(600,620,100,45), name="se_post_battle_advance")
 
 
 	# Image Rule Assets
@@ -30,6 +32,10 @@ class SecretAssets:
 	I_SE_BATTLE_WIN = RuleImage(roi_front=(436,62,100,100), roi_back=(436,62,100,100), threshold=0.8, method="Template matching", file="./tasks/Secret/se/se_se_battle_win.png")
 	# 已经完成可以退出 
 	I_SE_FINISHED_1 = RuleImage(roi_front=(441,546,40,43), roi_back=(441,546,40,43), threshold=0.8, method="Template matching", file="./tasks/Secret/se/se_se_finished_1.png")
+	# 秘闻战后对话框中央波纹，避开姓名、台词和立绘
+	I_SE_POST_BATTLE_DIALOGUE = RuleImage(roi_front=(500,571,220,39), roi_back=(460,548,320,82), threshold=0.85, method="Template matching", file="./tasks/Secret/se/se_post_battle_dialogue.png")
+	# 部分秘闻战后角色强化页：仅后续关卡中有效
+	I_SE_POST_BATTLE_UPGRADE = RuleImage(roi_front=(641,538,227,29), roi_back=(610,510,300,80), threshold=0.85, method="Template matching", file="./tasks/Secret/se/se_post_battle_upgrade.png")
 
 
 	# Ocr Rule Assets

@@ -460,7 +460,7 @@ class ScriptTask(WQExplore, SecretScriptTask, WantedQuestsAssets):
             while 1:
                 self.screenshot()
                 if self.get_current_page() in [page_battle_prepare, page_battle]:
-                    self.run_general_battle(self.battle_config, exit_matcher=any_of(self.I_UI_BACK_RED, self.I_WQSE_SPECIAL_FIRE))
+                    self.run_secret_battle(self.battle_config, exit_matcher=any_of(self.I_WQSE_FIRE, self.I_WQSE_SPECIAL_FIRE))
                     break
                 if self.appear_then_click(self.I_WQSE_FIRE, interval=1):
                     continue
