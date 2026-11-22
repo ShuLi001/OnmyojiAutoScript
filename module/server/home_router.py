@@ -3,8 +3,7 @@
 # github https://github.com/runhey
 import asyncio
 import json
-import threading
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, Response
 from pathlib import Path
 
 from module.config.utils import write_file
@@ -13,7 +12,7 @@ from module.logger import logger
 from module.server.api_logger import ApiLoggingRoute
 from module.ocr.rpc import ensure_ocr_server_ready, get_ocr_client, shutdown_ocr_server
 from module.server.main_manager import MainManager
-from module.server.updater import Updater
+from module.server.updater import Updater, update_job, update_lock
 from module.server.i18n import I18n
 
 home_app = APIRouter(
@@ -21,7 +20,6 @@ home_app = APIRouter(
     tags=["home"],
     route_class=ApiLoggingRoute,
 )
-update_info_lock = threading.Lock()
 
 
 @home_app.get('/test')
@@ -74,7 +72,8 @@ async def kill_server():
 
 
 @home_app.get('/update_info')
-async def update_info():
+async def update_info(response: Response):
+    response.headers['Cache-Control'] = 'no-store'
     try:
         return await asyncio.to_thread(_get_update_info)
     except Exception as e:
@@ -83,20 +82,29 @@ async def update_info():
 
 
 def _get_update_info():
-    with update_info_lock:
+    with update_lock:
         updater = Updater()
         return updater.get_update_info()
 
 
 @home_app.get('/execute_update')
-async def execute_update():
-    # 下拉仓库 -> 关闭所有脚本进程 -> 最后重启oasx
-    try:
-        updater = Updater()
-        updater.execute_pull()
-    except Exception as e:
-        logger.error(e)
-    return '手动更新将会立即结束运行中的脚本服务, 最后你还需重启oasx'
+async def execute_update(response: Response):
+    # Legacy OASX clients expect a string from this endpoint.
+    response.headers['Cache-Control'] = 'no-store'
+    update_job.start()
+    return '更新任务已在后台启动，可在新版 OASX 更新器中查看日志。完成后请重启 OAS 服务。'
+
+
+@home_app.post('/execute_update', status_code=202)
+async def start_update(response: Response):
+    response.headers['Cache-Control'] = 'no-store'
+    return update_job.start()
+
+
+@home_app.get('/update_status')
+async def update_status(response: Response):
+    response.headers['Cache-Control'] = 'no-store'
+    return update_job.snapshot()
 
 
 @home_app.put('/chinese_translate')
