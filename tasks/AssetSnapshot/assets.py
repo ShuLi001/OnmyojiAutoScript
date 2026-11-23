@@ -178,6 +178,31 @@ class AssetSnapshotAssets:
         name="asset_snapshot_jade_detail_close",
     )
 
+    # Stay left of the soul jade purchase '+' button.
+    C_SOUL_JADE_DETAIL = RuleClick(
+        roi_front=(1076, 16, 140, 30), roi_back=(1076, 16, 140, 30),
+        name="asset_snapshot_soul_jade_detail",
+    )
+    I_SOUL_JADE_DETAIL = RuleImage(
+        roi_front=(826, 131, 80, 32), roi_back=(816, 122, 108, 53),
+        threshold=0.95, method="Template matching",
+        file="./tasks/AssetSnapshot/assets/soul_jade_detail_title.png",
+    )
+    O_SOUL_JADE_DETAIL_NAME = RuleOcr(
+        roi=(826, 128, 120, 35), area=(826, 128, 120, 35),
+        mode="Single", method="Default", keyword="",
+        name="asset_snapshot_soul_jade_detail_name",
+    )
+    O_SOUL_JADE_DETAIL_OWNED = RuleOcr(
+        roi=(826, 164, 190, 34), area=(826, 164, 190, 34),
+        mode="Single", method="Default", keyword="",
+        name="asset_snapshot_soul_jade_detail_owned",
+    )
+    C_SOUL_JADE_DETAIL_CLOSE = RuleClick(
+        roi_front=(240, 540, 22, 100), roi_back=(240, 540, 22, 100),
+        name="asset_snapshot_soul_jade_detail_close",
+    )
+
     MATERIAL_RULES = [
         RuleImage(
             roi_front=(0, 0, *MATERIAL_MATCH_TEMPLATE_SIZE),

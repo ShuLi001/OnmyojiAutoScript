@@ -236,12 +236,13 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
             if variable_name == "jade":
                 values[variable_name] = self._read_jade_detail()
                 continue
+            if variable_name == "soul_jade":
+                values[variable_name] = self._read_resource_detail(variable_name, "魂玉")
+                continue
             x, y, width, height = rule.roi
             # Change vertical padding without dropping any leading/trailing digits.
             retry_rois = ((x - 4, y - 4, width + 4, height + 8),
                           (x - 4, y + 4, width + 4, height - 8))
-            if variable_name == "soul_jade":
-                retry_rois = ((1185, 12, 30, 40), (1185, 10, 30, 44))
             for attempt, roi in enumerate((rule.roi, *retry_rois)):
                 if attempt:
                     time.sleep(self.settle_seconds)
@@ -257,9 +258,6 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
                     current_rule = rule
                 raw = current_rule.ocr(self.device.image)
                 quantity = parse_top_resource_quantity(raw)
-                # The narrow soul-jade fallback can only verify a single zero.
-                if attempt and variable_name == "soul_jade" and quantity != 0:
-                    quantity = None
                 if quantity is not None:
                     if variable_name == "stamina":
                         quantity = self._read_stamina_detail()

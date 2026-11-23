@@ -1,7 +1,7 @@
 import tempfile
 import unittest
 from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 from module.exception import ScriptError
 from tasks.AssetSnapshot.asset_snapshot import parse_top_resource_quantity
@@ -92,23 +92,31 @@ class TopResourceReadingTest(unittest.TestCase):
         self.assertIsNot(fallback_rule.ocr.call_args_list[0].args[0],
                          fallback_rule.ocr.call_args_list[1].args[0])
 
-    def test_zero_soul_jade_still_uses_the_single_digit_fallback(self):
-        task, _ = self.task(variable="soul_jade", raw="")
-        fallback_rule = Mock()
-        fallback_rule.ocr.return_value = "0"
-        with patch("tasks.AssetSnapshot.script_task.RuleOcr", return_value=fallback_rule) as fallback, \
-                patch("tasks.AssetSnapshot.script_task.time.sleep"):
-            self.assertEqual(task._scan_top_resources(), {"soul_jade": 0})
-        self.assertEqual(fallback.call_args.kwargs["roi"], (1185, 12, 30, 40))
+    @patch("tasks.AssetSnapshot.script_task.time.sleep")
+    def test_soul_jade_reads_two_exact_detail_values_then_closes(self, _sleep):
+        for quantity in (3, 0):
+            with self.subTest(quantity=quantity):
+                task, header = self.task(variable="soul_jade", raw="")
+                task.device.click_record_clear = Mock()
+                task.observation_metadata = {}
+                task.O_SOUL_JADE_DETAIL_NAME = SimpleNamespace(ocr=Mock(return_value="魂玉"))
+                task.O_SOUL_JADE_DETAIL_OWNED = SimpleNamespace(ocr=Mock(return_value=f"已拥有：{quantity}"))
+                popup_open = False
 
-    def test_single_digit_soul_jade_crop_cannot_supply_a_nonzero_balance(self):
-        task, _ = self.task(variable="soul_jade", raw="")
-        fallback_rule = Mock()
-        fallback_rule.ocr.return_value = "8"
-        with patch("tasks.AssetSnapshot.script_task.RuleOcr", return_value=fallback_rule), \
-                patch("tasks.AssetSnapshot.script_task.time.sleep"):
-            with self.assertRaisesRegex(ScriptError, "soul_jade"):
-                task._scan_top_resources()
+                def click(action):
+                    nonlocal popup_open
+                    popup_open = action is task.C_SOUL_JADE_DETAIL
+
+                task.click = Mock(side_effect=click)
+                task.appear.side_effect = lambda rule: rule is task.I_CHECK_INVENTORY or popup_open
+
+                self.assertEqual(task._scan_top_resources(), {"soul_jade": quantity})
+                header.ocr.assert_not_called()
+                self.assertEqual(task.O_SOUL_JADE_DETAIL_OWNED.ocr.call_count, 2)
+                self.assertEqual(task.click.call_args_list,
+                                 [call(task.C_SOUL_JADE_DETAIL), call(task.C_SOUL_JADE_DETAIL_CLOSE)])
+                self.assertEqual(task.observation_metadata["soul_jade"]["precision"], "exact")
+                self.assertFalse(popup_open)
 
     def test_leaving_inventory_during_retry_aborts_before_using_fallback(self):
         task, _ = self.task()
