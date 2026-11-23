@@ -221,13 +221,13 @@ class ScriptTask(GameUi, AssetSnapshotAssets):
         selected, click = ((self.I_TAB_COMPOSITE, self.C_TAB_COMPOSITE) if category == "composite"
                            else (self.I_TAB_RECENT, self.C_TAB_RECENT))
         for _ in range(3):
-            if self.appear(selected, threshold=0.98):
+            if self.appear(selected, threshold=selected.threshold):
                 logger.info(f"AssetSnapshot selected category: {category}")
                 return
             self.click(click)
             time.sleep(0.5)
             self.screenshot()
-        if not self.appear(selected, threshold=0.98):
+        if not self.appear(selected, threshold=selected.threshold):
             raise ScriptError(f"无法确认纳物库分组已选中: {category}")
 
     def _scan_top_resources(self) -> dict[str, int]:

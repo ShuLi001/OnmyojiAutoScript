@@ -45,7 +45,7 @@ class AssetSnapshotAssets:
     I_INVENTORY_ENTRY = RuleImage(
         roi_front=(326, 627, 47, 30),
         roi_back=(290, 615, 110, 72),
-        threshold=0.85,
+        threshold=0.95,
         method="Template matching",
         file="./tasks/AssetSnapshot/assets/inventory_entry.png",
     )
@@ -60,21 +60,21 @@ class AssetSnapshotAssets:
     I_TAB_COMPOSITE = RuleImage(
         roi_front=(58, 189, 173, 53),
         roi_back=(58, 189, 173, 53),
-        threshold=0.82,
+        threshold=0.95,
         method="Template matching",
         file="./tasks/AssetSnapshot/assets/tab_zonghe.png",
     )
     I_SCROLL_THUMB_TOP = RuleImage(
         roi_front=(792, 162, 43, 43),
         roi_back=(792, 162, 43, 43),
-        threshold=0.85,
+        threshold=0.95,
         method="Template matching",
         file="./tasks/AssetSnapshot/assets/scroll_thumb_top.png",
     )
     I_SCROLL_THUMB_BOTTOM = RuleImage(
         roi_front=(792, 644, 43, 43),
         roi_back=(792, 644, 43, 43),
-        threshold=0.85,
+        threshold=0.95,
         method="Template matching",
         file="./tasks/AssetSnapshot/assets/scroll_thumb_bottom.png",
     )
@@ -134,7 +134,7 @@ class AssetSnapshotAssets:
     )
     I_STAMINA_DETAIL = RuleImage(
         roi_front=(420, 130, 80, 35), roi_back=(414, 122, 105, 51),
-        threshold=0.90, method="Template matching",
+        threshold=0.95, method="Template matching",
         file="./tasks/AssetSnapshot/assets/stamina_detail_title.png",
     )
     O_STAMINA_DETAIL_NAME = RuleOcr(
@@ -159,7 +159,7 @@ class AssetSnapshotAssets:
     )
     I_JADE_DETAIL = RuleImage(
         roi_front=(624, 130, 80, 35), roi_back=(618, 122, 105, 51),
-        threshold=0.90, method="Template matching",
+        threshold=0.95, method="Template matching",
         file="./tasks/AssetSnapshot/assets/jade_detail_title.png",
     )
     O_JADE_DETAIL_NAME = RuleOcr(
