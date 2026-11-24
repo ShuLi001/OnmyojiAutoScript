@@ -113,6 +113,9 @@ class CostumeBase:
         asset_before_object.file = asset_after.file
 
     def check_costume_main(self, main_type: MainType):
+        town = getattr(self, 'I_MAIN_GOTO_TOWN', None)
+        if town is not None:
+            town.click_bottom_inset = 10 if main_type == MainType.COSTUME_MAIN_9 else 0
         if main_type == MainType.COSTUME_MAIN:
             return
         logger.info(f'Switch main costume to {main_type}')

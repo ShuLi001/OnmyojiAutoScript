@@ -48,6 +48,7 @@ class RuleImage:
 
         self.roi_front: list = list(roi_front)
         self.roi_back = roi_back
+        self.click_bottom_inset = 0
         self.threshold = threshold
         self.file = file
         self.scale_range: tuple[float, float] | tuple[float, float, float] | None = None
@@ -332,7 +333,8 @@ class RuleImage:
         :return:
         """
         x, y, w, h = self.roi_front
-        return x + random_normal_distribution_int(0, w), y + random_normal_distribution_int(0, h)
+        click_height = max(1, h - self.click_bottom_inset)
+        return x + random_normal_distribution_int(0, w), y + random_normal_distribution_int(0, click_height)
 
     def coord_more(self) -> tuple:
         """
