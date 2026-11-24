@@ -1,15 +1,19 @@
 import datetime
 import os
+import re
 import signal
 import subprocess
 import threading
 from collections import deque
+from pathlib import Path
 from typing import Tuple
 from uuid import uuid4
 
+from filelock import FileLock
 from deploy.git import GitManager
 from deploy.pip import PipManager
 from deploy.utils import DEPLOY_CONFIG
+from module.config.atomicwrites import atomic_write
 from module.logger import logger
 from module.server.config import DeployConfig
 
@@ -19,11 +23,19 @@ DEFAULT_FETCH_TIMEOUT = 15
 FETCH_RETRY = 2
 DEFAULT_PULL_TIMEOUT = 300
 update_lock = threading.Lock()
+UPDATE_REPOSITORIES = {
+    "Gitee": "https://gitee.com/Shu_Li_x/OnmyojiAutoScript.git",
+    "GitHub": "https://github.com/ShuLi001/OnmyojiAutoScript.git",
+}
 
 
 class Updater(DeployConfig, GitManager, PipManager):
     def __init__(self, file=DEPLOY_CONFIG):
-        super().__init__(file=file)
+        self.file = file
+        self.config = {}
+        self.read()
+        if not os.path.exists(file):
+            self.write()
         self.state = 0
 
     @property
@@ -40,23 +52,22 @@ class Updater(DeployConfig, GitManager, PipManager):
         else:
             return None
 
-    def execute_command(self, command, timeout=DEFAULT_GIT_TIMEOUT) -> subprocess.CompletedProcess | None:
-        command = command.replace(r"\\", "/").replace("\\", "/").replace('"', '"')
+    def execute_command(self, args, timeout=DEFAULT_GIT_TIMEOUT) -> subprocess.CompletedProcess | None:
         try:
             return subprocess.run(
-                command,
+                [self.git, *args], cwd=self.root_filepath,
                 capture_output=True,
                 text=True,
                 encoding="utf8",
                 errors="replace",
-                shell=True,
+                env={**os.environ, "GIT_TERMINAL_PROMPT": "0", "GCM_INTERACTIVE": "Never"},
                 timeout=timeout,
             )
         except subprocess.TimeoutExpired:
-            logger.warning(f"Git command timeout after {timeout}s: {command}")
+            logger.warning(f"Git {args[0]} timed out after {timeout}s")
             return None
         except OSError as e:
-            logger.warning(f"Git command failed: {command}, error: {e}")
+            logger.warning(f"Git {args[0]} failed: {e}")
             return None
 
     def execute_output(self, command, timeout=DEFAULT_GIT_TIMEOUT) -> str:
@@ -76,7 +87,7 @@ class Updater(DeployConfig, GitManager, PipManager):
         ph = "h" if short_sha1 else "H"
 
         log = self.execute_output(
-            f'"{self.git}" --no-pager log {revision} --pretty=format:"%{ph}---%an---%ad---%s" --date=iso -{n}'
+            ["--no-pager", "log", f"--pretty=format:%{ph}---%an---%ad---%s", "--date=iso", f"-{n}", revision or "HEAD", "--"]
         )
 
         if not log:
@@ -91,7 +102,67 @@ class Updater(DeployConfig, GitManager, PipManager):
             return logs
 
     def current_branch(self) -> str:
-        return self.Branch
+        return self.execute_output(["branch", "--show-current"]).strip()
+
+    def update_target(self) -> dict:
+        origin = self.execute_output(["remote", "get-url", "origin"]).strip()
+        return {
+            "repositories": UPDATE_REPOSITORIES,
+            "repository": origin if origin in UPDATE_REPOSITORIES.values() else None,
+            "branch": self.Branch,
+        }
+
+    def save_update_target(self, repository: str, branch: str):
+        if repository not in UPDATE_REPOSITORIES.values():
+            raise ValueError("请选择列表中的 OAS 更新源")
+        if not re.fullmatch(r"[\w][\w./-]{0,199}", branch) or branch == "HEAD":
+            raise ValueError("更新分支名称无效")
+        valid = self.execute_command(["check-ref-format", f"refs/heads/{branch}"])
+        if valid is None or valid.returncode:
+            raise ValueError("更新分支名称无效")
+        remote = self.execute_command(["ls-remote", "--exit-code", "--heads", repository, f"refs/heads/{branch}"],
+                                      timeout=DEFAULT_FETCH_TIMEOUT)
+        if remote is None or remote.returncode != 0:
+            raise ValueError("远端没有这个分支" if remote and remote.returncode == 2 else "无法连接更新源并验证分支")
+
+        def set_git(*args):
+            result = self.execute_command(list(args))
+            if result is None or result.returncode:
+                raise RuntimeError("无法保存 Git 远端设置")
+
+        path = Path(self.file)
+        with FileLock(f"{path}.lock"):
+            original = path.read_bytes()
+            content = original.decode("utf-8")
+            for key, value in (("Repository", repository), ("Branch", branch)):
+                content, count = re.subn(rf"(?m)^([ \t]*{key}:[ \t]*)[^\r\n]*", lambda m: m[1] + value, content)
+                if count != 1:
+                    raise ValueError(f"部署配置中的 {key} 字段缺失或重复")
+            old = self.execute_output(["config", "--local", "--get", "remote.origin.url"]).strip()
+            if not old:
+                raise ValueError("当前 OAS 仓库缺少 origin")
+            push = self.execute_command(["config", "--local", "--get-all", "remote.origin.pushurl"])
+            if push is None or push.returncode not in (0, 1):
+                raise RuntimeError("无法读取 Git 推送地址")
+            add_push = old != repository and push.returncode == 1
+            if add_push:
+                set_git("remote", "set-url", "--push", "origin", old)
+            try:
+                if old != repository:
+                    set_git("remote", "set-url", "origin", repository)
+                updated = content.encode("utf-8")
+                if updated != original:
+                    with atomic_write(str(path), mode="wb", overwrite=True) as out:
+                        if os.name == "posix":
+                            os.fchmod(out.fileno(), path.stat().st_mode & 0o777)
+                        out.write(updated)
+            except BaseException:
+                if old != repository:
+                    set_git("remote", "set-url", "origin", old)
+                if add_push:
+                    set_git("config", "--local", "--unset", "remote.origin.pushurl")
+                raise
+        return {"repository": repository, "branch": branch}
 
     def current_commit(self) -> str:
         return self.get_commit()
@@ -104,7 +175,7 @@ class Updater(DeployConfig, GitManager, PipManager):
         source = "origin"
         for _ in range(FETCH_RETRY):
             result = self.execute_command(
-                f'"{self.git}" fetch {source} {self.Branch}',
+                ["fetch", source, f"+refs/heads/{self.Branch}:refs/remotes/{source}/{self.Branch}"],
                 timeout=DEFAULT_FETCH_TIMEOUT,
             )
             if result is not None and result.returncode == 0:
@@ -117,7 +188,7 @@ class Updater(DeployConfig, GitManager, PipManager):
 
     def revision_distance(self, left: str, right: str) -> tuple[int, int] | None:
         log = self.execute_output(
-            f'"{self.git}" rev-list --left-right --count {left}...{right}'
+            ["rev-list", "--left-right", "--count", f"{left}...{right}", "--"]
         )
         if not log:
             return None
@@ -133,6 +204,7 @@ class Updater(DeployConfig, GitManager, PipManager):
         is_update = False
         source = "origin"
         remote_revision = f"{source}/{self.Branch}"
+        current = self.current_branch()
 
         checked = self.fetch_remote()
         if checked:
@@ -141,17 +213,18 @@ class Updater(DeployConfig, GitManager, PipManager):
                 checked = False
             else:
                 ahead, behind = distance
-                is_update = not ahead and bool(behind)
-                if ahead:
+                is_update = current != self.Branch or (not ahead and bool(behind))
+                if ahead and current == self.Branch:
                     logger.info("Local branch has commits not in upstream, skip update")
                 logger.info("New update available" if is_update else "No update")
 
-        commits = self.get_commit(remote_revision, n=15)
+        commits = self.get_commit(remote_revision, n=15) if checked else []
         latest_commit = commits[0] if commits and isinstance(commits, list) else commits
         return {
             'checked': checked,
             'is_update': is_update,
-            'branch': self.current_branch(),
+            'branch': current,
+            'update_target': self.update_target(),
             'current_commit': self.current_commit(),
             'latest_commit': latest_commit,
             'commit': commits,
@@ -164,12 +237,34 @@ class Updater(DeployConfig, GitManager, PipManager):
                 on_log(message)
 
         emit(f'开始更新 OAS，分支：{self.Branch}')
+        switching = self.current_branch() != self.Branch
+        if switching:
+            if not self.fetch_remote():
+                emit('无法拉取目标分支')
+                return False
+            local = self.execute_command(["show-ref", "--verify", "--quiet", f"refs/heads/{self.Branch}"])
+            if local is None or local.returncode not in (0, 1):
+                emit('无法检查本地目标分支')
+                return False
+            if local.returncode == 0:
+                distance = self.revision_distance(f"refs/heads/{self.Branch}", f"refs/remotes/origin/{self.Branch}")
+                if distance is None or distance[0]:
+                    emit('本地目标分支有独立提交或无法核对，无法切换')
+                    return False
+                switch = ["switch", "--no-overwrite-ignore", self.Branch]
+            else:
+                switch = ["switch", "--no-overwrite-ignore", "-c", self.Branch, "--track", f"origin/{self.Branch}"]
+            result = self.execute_command(switch)
+            if result is None or result.returncode:
+                emit(f'切换更新分支失败：{result.stderr.strip() if result else "Git 超时或不可用"}')
+                return False
+            emit(f'已切换到分支 {self.Branch}')
         env = os.environ.copy()
         env['GIT_TERMINAL_PROMPT'] = '0'
         env['GCM_INTERACTIVE'] = 'Never'
         # Capture both streams, including Git progress normally written to stderr.
         with subprocess.Popen(
-            [self.git, 'pull', '--progress', 'origin', self.Branch, '--no-rebase'],
+            [self.git, 'pull', '--progress', '--ff-only' if switching else '--no-rebase', 'origin', self.Branch],
             cwd=self.root_filepath, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
             text=True, encoding='utf-8', errors='replace', env=env,
             creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,

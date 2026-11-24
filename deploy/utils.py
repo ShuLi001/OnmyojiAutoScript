@@ -79,6 +79,9 @@ def poor_yaml_read(file):
             if result:
                 k, v = result.group(1), result.group(2).strip('\n\r\t\' ')
                 if v:
+                    if k == 'Branch':
+                        data[k] = v
+                        continue
                     if v.lower() == 'null':
                         v = None
                     elif v.lower() == 'false':

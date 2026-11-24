@@ -3,7 +3,7 @@
 # github https://github.com/runhey
 import asyncio
 import json
-from fastapi import APIRouter, Body, Response
+from fastapi import APIRouter, Body, HTTPException, Response
 from pathlib import Path
 
 from module.config.utils import write_file
@@ -85,6 +85,20 @@ def _get_update_info():
     with update_lock:
         updater = Updater()
         return updater.get_update_info()
+
+
+@home_app.put('/update_target')
+def save_update_target(repository: str = Body(...), branch: str = Body(...)):
+    if not update_lock.acquire(blocking=False):
+        raise HTTPException(409, "正在检查或执行更新，请稍后保存")
+    try:
+        if update_job.snapshot()["status"] == "running":
+            raise HTTPException(409, "正在执行更新，请稍后保存")
+        return Updater().save_update_target(repository, branch)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    finally:
+        update_lock.release()
 
 
 @home_app.get('/execute_update')

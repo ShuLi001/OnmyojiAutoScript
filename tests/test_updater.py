@@ -1,6 +1,10 @@
 import io
+import shutil
+import subprocess
+import tempfile
 import threading
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -13,7 +17,7 @@ class UpdaterTest(unittest.TestCase):
         process.__enter__.return_value = process
         process.stdout = io.StringIO('Receiving objects: 50%\n中文输出\n')
         process.wait.return_value = 0
-        target = SimpleNamespace(git='git', Branch='mine', root_filepath='repo')
+        target = SimpleNamespace(git='git', Branch='mine', root_filepath='repo', current_branch=lambda: 'mine')
         logs = []
         process.wait.side_effect = lambda: self.assertIn('中文输出', logs) or 0
         with patch.object(updater.subprocess, 'Popen', return_value=process) as popen:
@@ -37,7 +41,7 @@ class UpdaterTest(unittest.TestCase):
         process.poll.return_value = None
         process.stdout = io.StringIO('')
         process.wait.return_value = -9
-        target = SimpleNamespace(git='git', Branch='mine', root_filepath='repo')
+        target = SimpleNamespace(git='git', Branch='mine', root_filepath='repo', current_branch=lambda: 'mine')
         logs = []
         with patch.object(updater.subprocess, 'Popen', return_value=process), \
                 patch.object(updater.subprocess, 'run'), \
@@ -129,6 +133,53 @@ class UpdaterTest(unittest.TestCase):
         self.assertEqual(len(logs), 1000)
         self.assertTrue(logs[0].startswith('100: '))
         self.assertTrue(all(len(line) <= 2000 for line in logs))
+
+    def test_saved_source_and_branch_drive_the_next_update(self):
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+            root = Path(tmp)
+            git = shutil.which('git')
+            def run(*args):
+                return subprocess.check_output([git, *args], cwd=root, text=True, stderr=subprocess.PIPE).strip()
+
+            run('init', '-b', 'mine', 'source')
+            run('-C', 'source', '-c', 'user.name=test', '-c', 'user.email=test@example.invalid',
+                'commit', '--allow-empty', '-m', 'first')
+            run('clone', '--bare', 'source', 'old.git')
+            run('clone', 'old.git', 'app')
+            run('-C', 'source', 'switch', '-c', 'release/test')
+            run('-C', 'source', '-c', 'user.name=test', '-c', 'user.email=test@example.invalid',
+                'commit', '--allow-empty', '-m', 'second')
+            run('clone', '--bare', 'source', 'new.git')
+
+            old_url = (root / 'old.git').as_posix()
+            new_url = (root / 'new.git').as_posix()
+            run('-C', 'app', 'remote', 'set-url', 'origin', old_url)
+            config = root / 'deploy.yaml'
+            config.write_text(f'Deploy:\n  Git:\n    Repository: {old_url}\n    Branch: mine\n    GitExecutable: {git}\n', encoding='utf-8')
+            target = updater.Updater(str(config))
+            target.root_filepath = str(root / 'app')
+            (root / 'app' / 'local-docker-file').write_text('keep', encoding='utf-8')
+            with patch.dict(updater.UPDATE_REPOSITORIES, {'Old': old_url, 'New': new_url}, clear=True):
+                original = config.read_bytes()
+                with self.assertRaises(ValueError):
+                    target.save_update_target(new_url, 'missing')
+                self.assertEqual(original, config.read_bytes())
+                self.assertEqual(run('-C', 'app', 'remote', 'get-url', 'origin'), old_url)
+                target.save_update_target(new_url, 'release/test')
+                self.assertEqual(run('-C', 'app', 'branch', '--show-current'), 'mine')
+                self.assertEqual(run('-C', 'app', 'remote', 'get-url', '--push', 'origin'), old_url)
+                target = updater.Updater(str(config))
+                target.root_filepath = str(root / 'app')
+                info = target.get_update_info()
+                self.assertEqual(info['update_target']['repository'], new_url)
+                self.assertEqual(info['update_target']['branch'], 'release/test')
+                self.assertEqual(info['branch'], 'mine')
+                self.assertTrue(info['is_update'])
+                self.assertTrue(target.execute_pull())
+                self.assertEqual(run('-C', 'app', 'branch', '--show-current'), 'release/test')
+                self.assertEqual(run('-C', 'app', 'rev-parse', 'HEAD'), run('-C', 'source', 'rev-parse', 'HEAD'))
+                self.assertFalse(target.get_update_info()['is_update'])
+                self.assertTrue((root / 'app' / 'local-docker-file').exists())
 
 
 if __name__ == '__main__':
